@@ -3,6 +3,18 @@
 > **Normative document.** All requirements marked **MUST**, **MUST NOT**, or **SHALL** are mandatory for compliance.
 
 ---
+## Architecture Overview
+
+See [`technical-overview.md`](technical-overview.md:33-92) for a detailed architecture diagram and module breakdown.
+
+---
+
+**Documentation:**
+- [Developer Guide](DEVELOPER_GUIDE.md): Traffic fingerprinting, shaping, and architectural notes
+- [Security Notes](SECURITY_NOTES.md): RNG, replay windows, side-channel mitigations
+- See [`technical-overview.md`](technical-overview.md:127) for deliverable mapping and rationale
+
+---
 
 ## 0  Status & Scope
 
@@ -360,6 +372,19 @@ A proposal passes when **all** hold:
 
 After threshold, activation waits **≥ 30 days**. If §10.3 fails at any time ≥ 7 days before activation, activation **MUST** be deferred until criteria are met for **7** consecutive days.
 Raven Development Team publishes a time-lock hash of the final text.
+
+---
+## Incomplete or Stubbed Features
+
+- QUIC transport support (stubbed, not implemented)
+- PQ hybrid handshake (stubbed, feature flag)
+- Multipath routing (API hooks only)
+- Mixnet integration (stubbed)
+- Adaptive shaping profiles (planned)
+- Distributed replay tracking (planned)
+
+All deferred features are documented in [Developer Guide](DEVELOPER_GUIDE.md) and [Security Notes](SECURITY_NOTES.md).
+See [`technical-overview.md`](technical-overview.md:167-191) for rationale and mitigation.
 
 ---
 

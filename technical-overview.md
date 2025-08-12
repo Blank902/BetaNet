@@ -148,4 +148,52 @@ text
 ---
 **Status:** draft 
 **Author:** ellentane
+## 13. Architectural Decisions Summary
+
+### Extensibility
+- **Feature Flags and Stubs:** Deferred features (QUIC, PQ hybrid, multipath, mixnet) are implemented as stubs or behind feature flags for progressive enhancement ([technical-overview.md:16-17, 21, 31, 124-126], [`src/htx/htx.c`](src/htx/htx.c:21, 478), [`src/noise/noise.c`](src/noise/noise.c:5, 35)).
+- **Modular Structure:** Codebase is organized into modules for transport, handshake, shaping, path selection, and ticketing ([technical-overview.md:83-92]).
+- **API Hooks:** Public API exposes hooks for path selection and bootstrap providers ([technical-overview.md:80-81]).
+
+### Security
+- **Noise XK with PQ Hybrid (Stubbed):** Implements Noise XK handshake with hybrid X25519 and Kyber768 support (stubbed, to be enabled by feature flag) ([technical-overview.md:103, 125], [`src/noise/noise.c`](src/noise/noise.c:5, 35, 229)).
+- **Replay and Rate Limiting:** Ticket replay prevention and per-peer rate limits are planned ([technical-overview.md:25, 105], [`src/pay/pay.c`](src/pay/pay.c:11, 87)).
+- **Framing and Padding:** Configurable padding and jittered keepalive for traffic analysis resistance ([technical-overview.md:104]).
+
+### Compliance
+- **Governance and Compliance Checks:** Compliance logic is modular, with stubs for future governance ([technical-overview.md:26], [`src/gov/gov.c`](src/gov/gov.c:135)).
+- **Replay and Admission Controls:** Planned integration of DHT, mDNS, Bluetooth, and PoW for peer admission ([`src/path/path.c`](src/path/path.c:154, 160, 166, 172)).
 **Last Updated:** 2025/12/8
+## 14. Deferred Features: Risks, Trade-offs, and Rationale
+
+### QUIC Transport
+- **Rationale for Deferral:** QUIC introduces significant complexity in protocol handling, dependency management, and fingerprinting ([technical-overview.md:21, 124, 137], [`src/htx/htx.c`](src/htx/htx.c:21, 478)). Deferred until HTTP/2/TLS transport is stable.
+- **Risks:** Falling behind on modern transport standards; future integration may require refactoring; potential security and performance gaps.
+- **Trade-offs:** Simpler initial implementation and testing; avoids premature optimization.
+- **Mitigation:** Maintain modular transport abstraction; track QUIC API changes; regression test with QUIC stubs.
+
+### PQ Hybrid (Post-Quantum)
+- **Rationale for Deferral:** PQ hybrid handshake (Kyber768) is stubbed and gated by feature flag ([technical-overview.md:31, 103, 125], [`src/noise/noise.c`](src/noise/noise.c:5, 35, 229)). Deferred due to dependency on external PQ libraries and evolving standards.
+- **Risks:** Delayed PQ readiness; risk of cryptographic agility issues; compliance lag if PQ becomes mandatory.
+- **Trade-offs:** Reduced implementation risk; easier debugging of classical crypto.
+- **Mitigation:** Keep hybrid handshake code paths tested (even as stubs); monitor PQC standardization; plan for rapid integration.
+
+### Multipath Routing
+- **Rationale for Deferral:** Multipath is API-hooked but only single-path is implemented ([technical-overview.md:24, 16], [`src/path/path.c`](src/path/path.c:93)). Deferred due to complexity in path management and lack of real-world multipath scenarios in demo.
+- **Risks:** Architectural drift if multipath is not considered in core logic; missed performance and resilience benefits.
+- **Trade-offs:** Simpler demo and test harness; avoids premature optimization.
+- **Mitigation:** Retain multipath hooks in API; document assumptions; design tests for multipath when feasible.
+
+### Mixnet Integration
+- **Rationale for Deferral:** Mixnet logic is stubbed in path selection ([technical-overview.md:30], [`src/path/path.c`](src/path/path.c:87, 93, 111, 121, 131)). Deferred due to external dependencies and complexity of mixnet routing.
+- **Risks:** Reduced privacy/anonymity; future integration may require changes to path abstraction.
+- **Trade-offs:** Faster initial delivery; avoids dependency on external mixnet infrastructure.
+- **Mitigation:** Keep mixnet stubs and interfaces; monitor mixnet ecosystem; plan for phased integration.
+## 15. Recommendations for Tracking and Mitigating Deferred Feature Risks
+
+- **Maintain Modular Interfaces:** Ensure all deferred features remain behind clear API boundaries and feature flags to minimize integration friction.
+- **Continuous Stub Testing:** Include stubs for deferred features in CI and regression tests to prevent bitrot and architectural drift.
+- **Upstream Monitoring:** Track upstream developments in QUIC, PQC, multipath, and mixnet standards; periodically review integration feasibility.
+- **Documentation and Issue Tracking:** Log all assumptions, deferred decisions, and open questions in project documentation and issue tracker.
+- **Stakeholder Review:** Schedule periodic architectural reviews to reassess priorities and unblock deferred features as resources allow.
+- **Compliance Watch:** Monitor regulatory and compliance changes that may affect cryptography or privacy requirements, especially for PQ and mixnet features.

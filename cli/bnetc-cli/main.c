@@ -5,8 +5,12 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
+#ifdef _WIN32
+#include <windows.h>
+#else
 #include <pthread.h>
 #include <unistd.h>
+#endif
 
 #include "betanet/betanet.h"
 
@@ -14,7 +18,11 @@
 #define DEMO_HOST "127.0.0.1"
 #define DEMO_TICKET "dummy-ticket-stub"
 
+#ifdef _WIN32
+DWORD WINAPI server_thread(LPVOID arg) {
+#else
 void* server_thread(void* arg) {
+#endif
     printf("[server] Starting server peer...\n");
     htx_ctx_t* srv_ctx = betanet_ctx_create_with_transport(BETANET_TRANSPORT_TCP);
     if (!srv_ctx) {
@@ -30,7 +38,11 @@ void* server_thread(void* arg) {
     }
     printf("[server] Waiting for client connection...\n");
     while (!betanet_is_connected(srv_ctx)) {
+#ifdef _WIN32
+        Sleep(100);
+#else
         usleep(100000); // 100ms
+#endif
     }
     printf("[server] Client connected!\n");
 
@@ -39,7 +51,11 @@ void* server_thread(void* arg) {
     if (!srv_chan) {
         fprintf(stderr, "[server] Failed to create secure channel\n");
         betanet_ctx_free(srv_ctx);
+    #ifdef _WIN32
+        return 0;
+    #else
         return NULL;
+    #endif
     }
     if (betanet_secure_handshake_responder(srv_chan, srv_ctx) != 0) {
         fprintf(stderr, "[server] Noise XK handshake failed\n");
@@ -66,13 +82,22 @@ void* server_thread(void* arg) {
     return NULL;
 }
 
+#ifdef _WIN32
+DWORD WINAPI client_thread(LPVOID arg) {
+    Sleep(200);
+#else
 void* client_thread(void* arg) {
     usleep(200000); // Wait for server to start
+#endif
     printf("[client] Starting client peer...\n");
     htx_ctx_t* cli_ctx = betanet_ctx_create_with_transport(BETANET_TRANSPORT_TCP);
     if (!cli_ctx) {
         fprintf(stderr, "[client] Failed to create context\n");
+    #ifdef _WIN32
+        return 0;
+    #else
         return NULL;
+    #endif
     }
 
     // Connect with ticket (stub)
@@ -82,7 +107,11 @@ void* client_thread(void* arg) {
         return NULL;
     }
     while (!betanet_is_connected(cli_ctx)) {
+#ifdef _WIN32
+        Sleep(100);
+#else
         usleep(100000); // 100ms
+#endif
     }
     printf("[client] Connected to server!\n");
 
