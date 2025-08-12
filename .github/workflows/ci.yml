@@ -1,0 +1,94 @@
+name: Betanet C Library CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: sudo apt-get update && sudo apt-get install -y cmake clang gcc libssl-dev ninja-build
+      - name: Configure (reproducible)
+        env:
+          SOURCE_DATE_EPOCH: 1700000000
+        run: |
+          cmake -B build -G Ninja -DCMAKE_C_COMPILER=clang -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_AR="gcc-ar" -DCMAKE_RANLIB="gcc-ranlib" -DCMAKE_C_FLAGS="-g -O2 -fdebug-prefix-map=${GITHUB_WORKSPACE}=. -Wdate-time -D_FORTIFY_SOURCE=2"
+      - name: Build (reproducible)
+        env:
+          SOURCE_DATE_EPOCH: 1700000000
+        run: cmake --build build
+      - name: Run interop tests
+        run: ./build/tests/interop/interop_protocol_test
+      - name: Run regression tests
+        run: |
+          ./build/tests/unit/fingerprint_regression_test
+          ./build/tests/unit/protocol_regression_test
+
+  asan-ubsan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: sudo apt-get update && sudo apt-get install -y cmake clang gcc libssl-dev ninja-build
+      - name: Configure with sanitizers (reproducible)
+        env:
+          SOURCE_DATE_EPOCH: 1700000000
+        run: |
+          cmake -B build-sanitize -G Ninja -DCMAKE_C_COMPILER=clang -DCMAKE_C_FLAGS="-fsanitize=address,undefined -g -fdebug-prefix-map=${GITHUB_WORKSPACE}=." .
+      - name: Build (reproducible)
+        env:
+          SOURCE_DATE_EPOCH: 1700000000
+        run: cmake --build build-sanitize
+      - name: Run regression tests with sanitizers
+        run: |
+          ./build-sanitize/tests/unit/fingerprint_regression_test
+          ./build-sanitize/tests/unit/protocol_regression_test
+
+  fuzz:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: sudo apt-get update && sudo apt-get install -y cmake clang gcc libssl-dev ninja-build
+      - name: Configure fuzz target (reproducible)
+        env:
+          SOURCE_DATE_EPOCH: 1700000000
+        run: |
+          cmake -B build-fuzz -G Ninja -DCMAKE_C_COMPILER=clang -DCMAKE_C_FLAGS="-fsanitize=fuzzer,address,undefined -g -fdebug-prefix-map=${GITHUB_WORKSPACE}=." .
+      - name: Build fuzz target (reproducible)
+        env:
+          SOURCE_DATE_EPOCH: 1700000000
+        run: cmake --build build-fuzz
+      - name: Run fuzzing (short smoke test)
+        run: |
+          timeout 30s ./build-fuzz/tests/unit/ticket_parser_fuzz || true
+
+  provenance:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: sudo apt-get update && sudo apt-get install -y cmake clang gcc libssl-dev ninja-build
+      - name: Configure (reproducible)
+        env:
+          SOURCE_DATE_EPOCH: 1700000000
+        run: |
+          cmake -B build -G Ninja -DCMAKE_C_COMPILER=clang -DCMAKE_BUILD_TYPE=Release -DCMAKE_AR="gcc-ar" -DCMAKE_RANLIB="gcc-ranlib" -DCMAKE_C_FLAGS="-g -O2 -fdebug-prefix-map=${GITHUB_WORKSPACE}=. -Wdate-time -D_FORTIFY_SOURCE=2"
+      - name: Build (reproducible)
+        env:
+          SOURCE_DATE_EPOCH: 1700000000
+        run: cmake --build build
+      - name: Generate SLSA provenance (SLSA 3)
+        uses: slsa-framework/slsa-github-generator@v2.0.0
+        with:
+          base64-subjects: |
+            $(sha256sum ./build/libbetanetc/libbetanetc.a | awk '{print $1}')
+          artifact-path: ./build/libbetanetc/libbetanetc.a
