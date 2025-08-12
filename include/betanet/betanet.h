@@ -19,12 +19,7 @@ typedef struct htx_ticket_s htx_ticket_t;
 void betanet_init(void);
 void betanet_shutdown(void);
 
-typedef struct {
-    float uptime_score;      // 0.0–1.0
-    float relay_score;       // 0.0–1.0
-    float staked_ecash;      // in satoshis
-    float trust_score;       // computed, 0.0–1.0
-} betanet_peer_trust_t;
+#include "../src/path/path.h"
 
 // Privacy mode API
 int betanet_set_privacy_mode(htx_ctx_t* ctx, betanet_privacy_mode_t mode);

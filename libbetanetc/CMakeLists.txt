@@ -15,7 +15,9 @@ add_library(betanetc
 
 target_include_directories(betanetc PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/../include
+    $<TARGET_PROPERTY:OpenSSL::SSL,INTERFACE_INCLUDE_DIRECTORIES>
 )
+target_link_libraries(betanetc PUBLIC OpenSSL::SSL OpenSSL::Crypto)
 
 if(BETANET_ENABLE_QUIC)
     # Example: find_package(picoquic REQUIRED) or add_subdirectory(picoquic)

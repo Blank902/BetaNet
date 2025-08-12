@@ -6,11 +6,7 @@
 
 #define CASHU_VOUCHER_SIZE 128
 
-typedef struct {
-    uint8_t keyset_id[32];
-    uint8_t secret[32];
-    uint8_t aggregated_sig[64];
-} cashu_voucher_t;
+#include "../../src/pay/pay.h"
 
 // Validate a Cashu voucher for a known keyset.
 // Returns 0 on success, nonzero on failure.

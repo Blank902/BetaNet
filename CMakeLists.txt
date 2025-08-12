@@ -1,6 +1,9 @@
 cmake_minimum_required(VERSION 3.15)
 project(betanet C)
 
+set(OPENSSL_ROOT_DIR "${CMAKE_SOURCE_DIR}/openssl")
+find_package(OpenSSL REQUIRED)
+
 set(CMAKE_C_STANDARD 11)
 
 add_subdirectory(libbetanetc)
