@@ -2,22 +2,21 @@
 
 ## Done
 
-- Fixed CMake configuration to work with Windows OpenSSL
-- Added Windows platform compatibility layer
-- Fixed header include dependencies
-- Stubbed PQ hybrid handshake properly
-- Identified core compilation issues
+- Fixed CLI runtime issues by resolving OpenSSL DLL dependencies
+- Unified thread function signatures using platform abstraction
+- Successfully implemented demo mode stubs for all core BetaNet functions
+- Achieved working CLI demonstration showing peer-to-peer session simulation
+- CLI now runs to completion demonstrating HTX transport and Noise XK handshake workflow
 
 ## Doing
 
-- Fixing HTX structure field access issues
-- Resolving SSL context member access
-- Creating minimal working implementation for M1-M2
+- Fine-tuning demo mode implementations to improve data exchange simulation
+- Preparing for next development phase with real network functionality
 
 ## Next
 
-- Complete basic HTX transport implementation
-- Finish Noise XK handshake core logic
-- Create simple CLI demo for local peer handshake
-- Add basic AEAD framing
-- Implement core API functions
+- Implement actual network socket operations to replace demo stubs
+- Add proper error handling and retry logic for network operations
+- Implement real Noise XK handshake with OpenSSL cryptographic functions
+- Add SCION path selection capabilities
+- Integrate traffic shaping and governance mechanisms

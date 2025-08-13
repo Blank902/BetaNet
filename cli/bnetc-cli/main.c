@@ -13,23 +13,20 @@
 #define DEMO_HOST "127.0.0.1"
 #define DEMO_TICKET "dummy-ticket-stub"
 
-#ifdef _WIN32
-DWORD WINAPI server_thread(LPVOID arg) {
-#else
 thread_return_t server_thread(void* arg) {
-#endif
+    (void)arg; // Unused
     printf("[server] Starting server peer...\n");
     htx_ctx_t* srv_ctx = betanet_ctx_create_with_transport(BETANET_TRANSPORT_TCP);
     if (!srv_ctx) {
         fprintf(stderr, "[server] Failed to create context\n");
-        return NULL;
+        thread_return(1);
     }
 
     // Accept with ticket (stub)
     if (betanet_accept_with_ticket(srv_ctx, DEMO_TICKET) != 0) {
         fprintf(stderr, "[server] Accept with ticket failed (stub)\n");
         betanet_ctx_free(srv_ctx);
-        return NULL;
+        thread_return(1);
     }
     printf("[server] Waiting for client connection...\n");
     while (!betanet_is_connected(srv_ctx)) {
@@ -46,17 +43,13 @@ thread_return_t server_thread(void* arg) {
     if (!srv_chan) {
         fprintf(stderr, "[server] Failed to create secure channel\n");
         betanet_ctx_free(srv_ctx);
-    #ifdef _WIN32
-        return 0;
-    #else
-        return NULL;
-    #endif
+        thread_return(1);
     }
     if (betanet_secure_handshake_responder(srv_chan, srv_ctx) != 0) {
         fprintf(stderr, "[server] Noise XK handshake failed\n");
         betanet_secure_channel_free(srv_chan);
         betanet_ctx_free(srv_ctx);
-        return NULL;
+        thread_return(1);
     }
     printf("[server] Noise XK handshake complete\n");
 
@@ -74,36 +67,24 @@ thread_return_t server_thread(void* arg) {
     betanet_secure_channel_free(srv_chan);
     betanet_ctx_free(srv_ctx);
     printf("[server] Done\n");
-#ifdef _WIN32
-    return 0;
-#else
-    return NULL;
-#endif
+    thread_return(0);
 }
 
-#ifdef _WIN32
-DWORD WINAPI client_thread(LPVOID arg) {
-    Sleep(200);
-#else
 thread_return_t client_thread(void* arg) {
-    usleep(200000); // Wait for server to start
-#endif
+    (void)arg; // Unused
+    thread_sleep_ms(200); // Wait for server to start
     printf("[client] Starting client peer...\n");
     htx_ctx_t* cli_ctx = betanet_ctx_create_with_transport(BETANET_TRANSPORT_TCP);
     if (!cli_ctx) {
         fprintf(stderr, "[client] Failed to create context\n");
-    #ifdef _WIN32
-        return 0;
-    #else
-        return NULL;
-    #endif
+        thread_return(1);
     }
 
     // Connect with ticket (stub)
     if (betanet_connect_with_ticket(cli_ctx, DEMO_HOST, DEMO_PORT, DEMO_TICKET) != 0) {
         fprintf(stderr, "[client] Connect with ticket failed (stub)\n");
         betanet_ctx_free(cli_ctx);
-        return NULL;
+        thread_return(1);
     }
     while (!betanet_is_connected(cli_ctx)) {
 #ifdef _WIN32
@@ -119,13 +100,13 @@ thread_return_t client_thread(void* arg) {
     if (!cli_chan) {
         fprintf(stderr, "[client] Failed to create secure channel\n");
         betanet_ctx_free(cli_ctx);
-        return NULL;
+        thread_return(1);
     }
     if (betanet_secure_handshake_initiator(cli_chan, cli_ctx) != 0) {
         fprintf(stderr, "[client] Noise XK handshake failed\n");
         betanet_secure_channel_free(cli_chan);
         betanet_ctx_free(cli_ctx);
-        return NULL;
+        thread_return(1);
     }
     printf("[client] Noise XK handshake complete\n");
 
@@ -147,23 +128,28 @@ thread_return_t client_thread(void* arg) {
     betanet_secure_channel_free(cli_chan);
     betanet_ctx_free(cli_ctx);
     printf("[client] Done\n");
-#ifdef _WIN32
-    return 0;
-#else
-    return NULL;
-#endif
+    thread_return(0);
 }
 
 int main() {
+    printf("Starting main function...\n");
+    fflush(stdout);
+    
     thread_t srv, cli;
     printf("Betanet CLI demo: local peer-to-peer session\n");
+    fflush(stdout);
 
     // Initialize library (if needed)
+    printf("Initializing BetaNet library...\n");
     betanet_init();
+    printf("BetaNet library initialized successfully\n");
 
+    printf("Creating server thread...\n");
     thread_create(&srv, server_thread, NULL);
+    printf("Creating client thread...\n");
     thread_create(&cli, client_thread, NULL);
 
+    printf("Waiting for threads to complete...\n");
     thread_join(srv, NULL);
     thread_join(cli, NULL);
 
