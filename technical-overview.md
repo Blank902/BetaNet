@@ -15,6 +15,14 @@ The goal is to produce a fully testable implementation for the newly announced *
 - Include CLI demo for running **two peers locally**.
 - Structure code for progressive enhancement (Noise‑XK, PQ hybrid, multipath routing, cover traffic shaping).
 
+## PQ Hybrid Handshake (X25519+Kyber768, Feature-Flagged, Stub)
+
+Betanet implements a **PQ hybrid handshake** (X25519+Kyber768) as a stub, gated by the `BETANET_ENABLE_PQ_HYBRID` feature flag. This code path is present for compliance and future PQC readiness, but is **not implemented** and does not provide real Kyber768 security.
+
+- **How to enable:**  
+  Define `BETANET_ENABLE_PQ_HYBRID` as `1` at compile time or uncomment the macro in [`include/betanet/betanet.h`](include/betanet/betanet.h:4-7).
+- **Status:** Stub only; enabling the flag does not provide PQ security.
+- **Rationale:** Deferred due to dependency on external PQ libraries and evolving standards. See §14 Deferred Features for details.
 ## 3. Scope
 
 ### 3.1 In-Scope (Initial Milestone)
@@ -120,7 +128,7 @@ text
 | M1 | Outer TLS/HTTP2 transport & ticket handling | Weeks 2–3 |
 | M2 | Noise XK inner channel, AEAD framing | Weeks 4–5 |
 | M3 | Rekey / rotation logic & replay defense | Week 6 |
-| M4 | Shaping profiles / fingerprint tuning | Week 7 |
+| M4 | Shaping profiles / fingerprint tuning (adaptive HTTP/2/3 emulation, SETTINGS mirroring, PING cadence, padding, priorities) | Week 7 (complete) |
 | M5 | QUIC transport support (optional) | Week 8+ |
 | M6 | PQ hybrid integration | Future |
 
@@ -158,7 +166,7 @@ text
 ### Security
 - **Noise XK with PQ Hybrid (Stubbed):** Implements Noise XK handshake with hybrid X25519 and Kyber768 support (stubbed, to be enabled by feature flag) ([technical-overview.md:103, 125], [`src/noise/noise.c`](src/noise/noise.c:5, 35, 229)).
 - **Replay and Rate Limiting:** Ticket replay prevention and per-peer rate limits are planned ([technical-overview.md:25, 105], [`src/pay/pay.c`](src/pay/pay.c:11, 87)).
-- **Framing and Padding:** Configurable padding and jittered keepalive for traffic analysis resistance ([technical-overview.md:104]).
+- **Framing and Padding:** Configurable padding, adaptive shaping, SETTINGS mirroring, PING cadence, and jittered keepalive for traffic analysis resistance and protocol indistinguishability ([technical-overview.md:104], README.md:454-455).
 
 ### Compliance
 - **Governance and Compliance Checks:** Compliance logic is modular, with stubs for future governance ([technical-overview.md:26], [`src/gov/gov.c`](src/gov/gov.c:135)).
@@ -170,25 +178,32 @@ text
 - **Rationale for Deferral:** QUIC introduces significant complexity in protocol handling, dependency management, and fingerprinting ([technical-overview.md:21, 124, 137], [`src/htx/htx.c`](src/htx/htx.c:21, 478)). Deferred until HTTP/2/TLS transport is stable.
 - **Risks:** Falling behind on modern transport standards; future integration may require refactoring; potential security and performance gaps.
 - **Trade-offs:** Simpler initial implementation and testing; avoids premature optimization.
-- **Mitigation:** Maintain modular transport abstraction; track QUIC API changes; regression test with QUIC stubs.
+- **Mitigation:** Maintain modular transport abstraction; track QUIC API changes; regression test with QUIC stubs. QUIC stubs are clearly marked in code and referenced in documentation.
 
 ### PQ Hybrid (Post-Quantum)
 - **Rationale for Deferral:** PQ hybrid handshake (Kyber768) is stubbed and gated by feature flag ([technical-overview.md:31, 103, 125], [`src/noise/noise.c`](src/noise/noise.c:5, 35, 229)). Deferred due to dependency on external PQ libraries and evolving standards.
 - **Risks:** Delayed PQ readiness; risk of cryptographic agility issues; compliance lag if PQ becomes mandatory.
 - **Trade-offs:** Reduced implementation risk; easier debugging of classical crypto.
-- **Mitigation:** Keep hybrid handshake code paths tested (even as stubs); monitor PQC standardization; plan for rapid integration.
+- **Mitigation:** Hybrid handshake code paths are tested as stubs; PQC standardization is monitored; documentation and code comments reference deferred status and rationale.
 
 ### Multipath Routing
 - **Rationale for Deferral:** Multipath is API-hooked but only single-path is implemented ([technical-overview.md:24, 16], [`src/path/path.c`](src/path/path.c:93)). Deferred due to complexity in path management and lack of real-world multipath scenarios in demo.
 - **Risks:** Architectural drift if multipath is not considered in core logic; missed performance and resilience benefits.
 - **Trade-offs:** Simpler demo and test harness; avoids premature optimization.
-- **Mitigation:** Retain multipath hooks in API; document assumptions; design tests for multipath when feasible.
+- **Mitigation:** Multipath hooks are retained in API; assumptions are documented in code and documentation; design tests for multipath when feasible.
 
 ### Mixnet Integration
 - **Rationale for Deferral:** Mixnet logic is stubbed in path selection ([technical-overview.md:30], [`src/path/path.c`](src/path/path.c:87, 93, 111, 121, 131)). Deferred due to external dependencies and complexity of mixnet routing.
 - **Risks:** Reduced privacy/anonymity; future integration may require changes to path abstraction.
 - **Trade-offs:** Faster initial delivery; avoids dependency on external mixnet infrastructure.
-- **Mitigation:** Keep mixnet stubs and interfaces; monitor mixnet ecosystem; plan for phased integration.
+- **Mitigation:** Mixnet stubs and interfaces are kept in code; documentation references deferred status and phased integration plan.
+
+### Distributed Replay Tracking
+- **Rationale for Deferral:** Distributed replay tracking is deferred and not yet implemented ([technical-overview.md:191], [`src/boot/boot.c`](src/boot/boot.c:4, 29)). Deferred due to complexity and prioritization of core features.
+- **Risks:** Potential replay vulnerabilities in distributed settings; delayed deployment of distributed anti-abuse.
+- **Trade-offs:** Faster delivery of core functionality; avoids premature optimization.
+- **Mitigation:** Modular design allows for future addition; rationale and risks are documented in code and documentation.
+
 ## 15. Recommendations for Tracking and Mitigating Deferred Feature Risks
 
 - **Maintain Modular Interfaces:** Ensure all deferred features remain behind clear API boundaries and feature flags to minimize integration friction.

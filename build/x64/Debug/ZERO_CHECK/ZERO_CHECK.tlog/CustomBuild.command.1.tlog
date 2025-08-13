@@ -1,0 +1,10 @@
+^C:\USERS\XXLMN\DOCUMENTS\BETANET\BUILD\CMAKEFILES\8FC80CCDFE69FA83A14EB23597837D22\GENERATE.STAMP.RULE
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -SC:/Users/xxlmn/Documents/BetaNet -BC:/Users/xxlmn/Documents/BetaNet/build --check-stamp-list CMakeFiles/generate.stamp.list --vs-solution-file C:/Users/xxlmn/Documents/BetaNet/build/betanet.sln
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd

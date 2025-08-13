@@ -11,9 +11,12 @@ extern "C" {
 #endif
 
 #include "../shape/shape.h"
+#include "quic.h"
 
 // Transport type for HTX session.
-// TCP: TLS1.3/HTTP2 mimic; QUIC: future support; UDP: fallback/cover logic.
+// TCP: TLS1.3/HTTP2 mimic (§5.1, §5.5, technical-overview.md:21, 58-59, 102-104).
+// QUIC: future support (see §5.6, technical-overview.md:21, 124, 137, 153-174).
+// UDP: fallback/cover logic (§5.6).
 typedef enum {
     HTX_TRANSPORT_TCP = 0,
     HTX_TRANSPORT_QUIC = 1,
@@ -22,7 +25,8 @@ typedef enum {
 
 // HTX session context.
 // Holds transport state, negotiated ALPN, and shaping configuration.
-// See Betanet Spec §5 for required behaviors.
+// Implements fingerprint tuning and mirroring as per Betanet Spec §5.1, §5.5 (JA3/JA4, SETTINGS, extension order).
+// Modular for future QUIC integration (§5.6, technical-overview.md:21, 124, 137, 153-174).
 typedef struct htx_ctx_s {
     htx_transport_type_t transport;
     int is_connected;
@@ -34,6 +38,8 @@ typedef struct htx_ctx_s {
     uint8_t peer_priority[16];
     size_t peer_priority_len;
     uint32_t peer_idle_padding_len;
+    // --- Fingerprint tuning profile (JA3/JA4, SETTINGS, extension order) ---
+    int fingerprint_profile_id; // Reserved for future use (stub, §5.1, §5.5)
     union {
         struct {
             int sockfd;
@@ -41,7 +47,7 @@ typedef struct htx_ctx_s {
             SSL_CTX *ssl_ctx;
         } tcp;
         struct {
-            void* quic_conn; // opaque pointer for picoquic/msquic
+            htx_quic_conn_t* quic_conn; // opaque handle for QUIC
         } quic;
         struct {
             int sockfd; // UDP socket
@@ -50,23 +56,26 @@ typedef struct htx_ctx_s {
 } htx_ctx_t;
 
 // Profile/ALPN configuration
+// ALPN and profile tuning as per Betanet Spec §5.1, §5.5.
 #define HTX_ALPN_HTTP2 "h2"
 #define HTX_PROFILE_ID "betanet-htx/1"
 
-// QUIC stub API (for BETANET_ENABLE_QUIC)
-#ifdef BETANET_ENABLE_QUIC
-int htx_quic_connect_stub(const char* host, uint16_t port, void** out_conn);
-int htx_quic_send_stub(void* quic_conn, const uint8_t* data, size_t len);
-int htx_quic_recv_stub(void* quic_conn, uint8_t* buf, size_t maxlen);
-void htx_quic_close_stub(void* quic_conn);
-#endif
 
 /**
  * Create context with transport type.
  * Initializes shaping config and transport state.
+ * Accepts future fingerprint profile tuning (stub, §5.1, §5.5).
  */
 htx_ctx_t* htx_ctx_create(htx_transport_type_t transport);
 void htx_ctx_free(htx_ctx_t* ctx);
+
+/**
+ * Set fingerprint tuning profile (JA3/JA4, SETTINGS, extension order).
+ * Stub for future use. See Betanet Spec §5.1, §5.5.
+ */
+static inline void htx_set_fingerprint_profile(htx_ctx_t* ctx, int profile_id) {
+    if (ctx) ctx->fingerprint_profile_id = profile_id;
+}
 
 /**
  * Attempt connection with QUIC/UDP, fallback to TCP on failure.

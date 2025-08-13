@@ -10,53 +10,27 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
-#include <netdb.h>
-#include <arpa/inet.h>
-#include <sys/socket.h>
 #include <time.h>
+#include <stdint.h>
+#include "../util/platform.h"
 #include "../shape/shape.h"
+#include "../path/path.h"
 
-// --- QUIC/UDP stub includes ---
+/*
+ * --- QUIC Transport Integration Scaffolding ---
+ * Conditional compilation for QUIC library selection.
+ * To enable QUIC support, define BETANET_ENABLE_QUIC and select a library:
+ *   -DQUIC_LIB_MSQUIC
+ *   -DQUIC_LIB_QUICHE
+ *   -DQUIC_LIB_PICOQUIC
+ *
+ * Only one QUIC library should be enabled at a time.
+ * See technical-overview.md for integration notes.
+ */
 #ifdef BETANET_ENABLE_QUIC
-// #include <picoquic.h> // or msquic headers
-
-// --- QUIC Transport Stubs ---
-typedef struct {
-    void* quic_conn; // Opaque pointer for QUIC connection
-    int is_established;
-} htx_quic_state_t;
-
-// Stub: QUIC connect (to be replaced with real QUIC library)
-int htx_quic_connect_stub(const char* host, uint16_t port, void** out_conn) {
-    (void)host; (void)port;
-    // Allocate dummy connection object
-    *out_conn = malloc(8);
-    if (*out_conn) {
-        return 0;
-    }
-    return -1;
-}
-
-// Stub: QUIC send
-int htx_quic_send_stub(void* quic_conn, const uint8_t* data, size_t len) {
-    (void)quic_conn; (void)data; (void)len;
-    // No-op for stub
-    return (int)len;
-}
-
-// Stub: QUIC receive
-int htx_quic_recv_stub(void* quic_conn, uint8_t* buf, size_t maxlen) {
-    (void)quic_conn; (void)buf; (void)maxlen;
-    // No-op for stub
-    return 0;
-}
-
-// Stub: QUIC close
-void htx_quic_close_stub(void* quic_conn) {
-    if (quic_conn) free(quic_conn);
-}
+#include "quic.h"
 #endif
+
 
 // Establishes a TCP connection to the given host/port.
 // Used as the underlying transport for TLS1.3 handshake.
@@ -94,7 +68,7 @@ htx_ctx_t* htx_ctx_create(htx_transport_type_t transport) {
         ctx->state.tcp.ssl = NULL;
         ctx->state.tcp.ssl_ctx = NULL;
     } else if (transport == HTX_TRANSPORT_QUIC) {
-        ctx->state.quic.quic_conn = NULL;
+        ctx->state.quic.quic_conn = NULL; // QUIC stub (see [README.md:380-387])
     }
     return ctx;
 }
@@ -108,7 +82,7 @@ void htx_ctx_free(htx_ctx_t* ctx) {
     } else if (ctx->transport == HTX_TRANSPORT_QUIC) {
 #ifdef BETANET_ENABLE_QUIC
         if (ctx->state.quic.quic_conn) {
-            htx_quic_close_stub(ctx->state.quic.quic_conn);
+            htx_quic_close_stub(ctx->state.quic.quic_conn); // QUIC stub
             ctx->state.quic.quic_conn = NULL;
         }
 #endif
@@ -166,6 +140,7 @@ int htx_connect(htx_ctx_t* ctx, const char* host, uint16_t port, const char* alp
         }
         ctx->is_connected = 1;
         // --- MASQUE/CONNECT-UDP stub logic ---
+        // Multipath and MASQUE/CONNECT-UDP are not implemented. See [README.md:384-387], [technical-overview.md:152-191].
         // In a real implementation, this would establish a CONNECT-UDP tunnel via HTTP/3/QUIC proxy.
         // For now, just log the intent.
         printf("[HTX] MASQUE/CONNECT-UDP logic placeholder: would establish UDP tunnel via proxy here.\n");
@@ -181,26 +156,26 @@ int htx_tls_handshake(htx_ctx_t* ctx, const char* host, const char* alpn) {
     if (!ctx) return -1;
     SSL_load_error_strings();
     OpenSSL_add_ssl_algorithms();
-    ctx->ssl_ctx = SSL_CTX_new(TLS_client_method());
-    if (!ctx->ssl_ctx) return -1;
-    ctx->ssl = SSL_new(ctx->ssl_ctx);
-    if (!ctx->ssl) return -1;
-    SSL_set_fd(ctx->ssl, ctx->sockfd);
+    ctx->state.tcp.ssl_ctx = SSL_CTX_new(TLS_client_method());
+    if (!ctx->state.tcp.ssl_ctx) return -1;
+    ctx->state.tcp.ssl = SSL_new(ctx->state.tcp.ssl_ctx);
+    if (!ctx->state.tcp.ssl) return -1;
+    SSL_set_fd(ctx->state.tcp.ssl, ctx->state.tcp.sockfd);
     // Set SNI (Server Name Indication)
-    SSL_set_tlsext_host_name(ctx->ssl, host);
+    SSL_set_tlsext_host_name(ctx->state.tcp.ssl, host);
     // Set ALPN (Application-Layer Protocol Negotiation)
     if (alpn) {
         unsigned char alpn_proto[256];
         size_t alpn_len = strlen(alpn);
         alpn_proto[0] = (unsigned char)alpn_len;
         memcpy(alpn_proto + 1, alpn, alpn_len);
-        SSL_set_alpn_protos(ctx->ssl, alpn_proto, (unsigned int)(alpn_len + 1));
+        SSL_set_alpn_protos(ctx->state.tcp.ssl, alpn_proto, (unsigned int)(alpn_len + 1));
     }
-    if (SSL_connect(ctx->ssl) != 1) return -1;
+    if (SSL_connect(ctx->state.tcp.ssl) != 1) return -1;
     // Get negotiated ALPN
     const unsigned char* alpn_out = NULL;
     unsigned int alpn_outlen = 0;
-    SSL_get0_alpn_selected(ctx->ssl, &alpn_out, &alpn_outlen);
+    SSL_get0_alpn_selected(ctx->state.tcp.ssl, &alpn_out, &alpn_outlen);
     if (alpn_out && alpn_outlen > 0) {
         size_t len = alpn_outlen < sizeof(ctx->alpn_selected) - 1 ? alpn_outlen : sizeof(ctx->alpn_selected) - 1;
         memcpy(ctx->alpn_selected, alpn_out, len);
@@ -213,10 +188,10 @@ int htx_tls_handshake(htx_ctx_t* ctx, const char* host, const char* alpn) {
 // Betanet Spec §5.1, §5.5. SETTINGS values are mirrored/adaptive if available.
 // This function mimics the origin's HTTP/2 fingerprint for indistinguishability.
 int htx_send_http2_preamble(htx_ctx_t* ctx) {
-    if (!ctx || !ctx->ssl) return -1;
+    if (!ctx || !ctx->state.tcp.ssl) return -1;
     // HTTP/2 connection preface (RFC 7540 §3.5)
     const char* preface = "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n";
-    int ret = SSL_write(ctx->ssl, preface, (int)strlen(preface));
+    int ret = SSL_write(ctx->state.tcp.ssl, preface, (int)strlen(preface));
     if (ret <= 0) return -1;
     // Send minimal HTTP/2-like headers (mimicry)
     /*
@@ -224,7 +199,7 @@ int htx_send_http2_preamble(htx_ctx_t* ctx) {
      * This now builds a real HTTP/2 SETTINGS frame with configurable parameters.
      * See Betanet Spec §5.1, §5.5 for mirroring and tolerance requirements.
      */
-    unsigned char settings_payload[18] = {
+    unsigned char settings_payload[22] = {
         0x00, 0x01, 0x00, 0x00, 0x10, // SETTINGS_HEADER_TABLE_SIZE = 4096
         0x00, 0x02, 0x00, 0x00, 0x00, // SETTINGS_ENABLE_PUSH = 0
         0x00, 0x03, 0x00, 0x00, 0xFF, 0xFF, // SETTINGS_MAX_CONCURRENT_STREAMS = 65535
@@ -232,14 +207,14 @@ int htx_send_http2_preamble(htx_ctx_t* ctx) {
     };
     // Frame header: length=18, type=0x4 (SETTINGS), flags=0, stream=0
     unsigned char settings_frame[9] = {0x00,0x00,0x12,0x04,0x00,0x00,0x00,0x00,0x00};
-    ret = SSL_write(ctx->ssl, settings_frame, 9);
+    ret = SSL_write(ctx->state.tcp.ssl, settings_frame, 9);
     if (ret <= 0) return -1;
-    ret = SSL_write(ctx->ssl, settings_payload, 18);
+    ret = SSL_write(ctx->state.tcp.ssl, settings_payload, 22);
     if (ret <= 0) return -1;
     /* Optionally mirror peer SETTINGS if available (stub: adaptive mirroring) */
     if (ctx->peer_settings_len > 0 && ctx->peer_settings_len <= 64) {
-        SSL_write(ctx->ssl, settings_frame, 9);
-        SSL_write(ctx->ssl, ctx->peer_settings, ctx->peer_settings_len);
+        SSL_write(ctx->state.tcp.ssl, settings_frame, 9);
+        SSL_write(ctx->state.tcp.ssl, ctx->peer_settings, ctx->peer_settings_len);
     }
     return 0;
 }
@@ -250,10 +225,10 @@ int htx_is_connected(htx_ctx_t* ctx) {
 // --- Fallback logic: QUIC/UDP first, then TCP ---
 
 // --- Cover connection logic for anti-correlation (Betanet 1.1) ---
-#include <pthread.h>
+// Uses platform.h threading abstraction
 
 typedef struct {
-    pthread_t thread;
+    thread_t thread;
     int sockfd;
     int active;
 } htx_cover_conn_t;
@@ -262,35 +237,40 @@ typedef struct {
 
 static htx_cover_conn_t cover_conns[HTX_COVER_CONN_COUNT];
 
-static void* htx_cover_conn_thread(void* arg) {
+static thread_return_t htx_cover_conn_thread(void* arg) {
     htx_cover_conn_t* conn = (htx_cover_conn_t*)arg;
     // Simulate a cover connection: connect, hold, then close
     // Use random short lifetime for anti-correlation
     int hold_ms = 100 + rand() % 400;
-    usleep(hold_ms * 1000);
+    thread_sleep_ms(hold_ms);
     if (conn->sockfd != -1) {
         close(conn->sockfd);
         conn->sockfd = -1;
     }
     conn->active = 0;
+#ifdef _WIN32
+    return 0;
+#else
     return NULL;
+#endif
 }
 
 // Launches cover connections (dummy TCP connections) for anti-correlation
-static void htx_launch_cover_connections(const char* host, uint16_t port) {
-    srand((unsigned int)time(NULL) ^ getpid());
+int htx_launch_cover_connections(const char* host, uint16_t port) {
+    srand((unsigned int)time(NULL));
     for (int i = 0; i < HTX_COVER_CONN_COUNT; ++i) {
         cover_conns[i].sockfd = htx_tcp_connect(host, port);
         cover_conns[i].active = 1;
-        pthread_create(&cover_conns[i].thread, NULL, htx_cover_conn_thread, &cover_conns[i]);
+        thread_create(&cover_conns[i].thread, htx_cover_conn_thread, &cover_conns[i]);
     }
+    return 0;
 }
 
 // Tears down all cover connections (waits for threads to finish)
 static void htx_teardown_cover_connections() {
     for (int i = 0; i < HTX_COVER_CONN_COUNT; ++i) {
         if (cover_conns[i].active) {
-            pthread_join(cover_conns[i].thread, NULL);
+            thread_join(cover_conns[i].thread, NULL);
             if (cover_conns[i].sockfd != -1) {
                 close(cover_conns[i].sockfd);
                 cover_conns[i].sockfd = -1;
@@ -316,7 +296,7 @@ int htx_connect_with_fallback(htx_ctx_t* ctx, const char* host, uint16_t port, c
     // Randomized back-off [200ms,1200ms]
     srand((unsigned int)time(NULL));
     int backoff_ms = 200 + rand() % (1200 - 200 + 1);
-    usleep(backoff_ms * 1000);
+    thread_sleep_ms(backoff_ms);
     // Fallback to TCP
     ctx->transport = HTX_TRANSPORT_TCP;
     if (htx_connect(ctx, host, port, alpn) == 0) {
@@ -402,13 +382,12 @@ int htx_maybe_send_priority(htx_ctx_t* ctx) {
         SSL_write(ctx->state.tcp.ssl, ctx->peer_priority, ctx->peer_priority_len);
     }
     return 1;
+}
+
 // --- SCION Transition Gateway Logic (HTX-tunnelled) ---
 // Implements transition control stream for SCION path bridging as per
 // Betanet Spec §4.2. Encapsulates SCION packets in HTX streams with
 // CBOR-encoded control messages. No legacy transition header is used.
-
-#include "../path/path.h"
-#include <stdint.h>
 
 /*
  * Minimal CBOR encoder for transition control stream.
@@ -522,5 +501,4 @@ int htx_send_scion_payload(htx_ctx_t* ctx, const uint8_t* scion_pkt, size_t pkt_
 #endif
     // For UDP: not supported
     return 0;
-}
 }

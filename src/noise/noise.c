@@ -12,12 +12,13 @@
  *   - "Rekeying" ([README.md](README.md#rekeying))
  *   - "Replay Defense" ([README.md](README.md#replay-defense))
  *
- * Limitations:
- *   - Kyber768 support is stubbed; only X25519 is fully functional (see [README.md](README.md#post-quantum)).
- *   - Static keys, PSK, and prologue are not implemented.
- *   - Rekey/rotation is simplified.
- *   - Replay defense is nonce-based only.
- *   - See stub/incomplete markers below.
+// Limitations:
+//   - Kyber768 support is stubbed; only X25519 is fully functional (see [README.md:397], [technical-overview.md:176]).
+//   - PQ hybrid handshake is not production-ready; see documentation for rationale and mitigation.
+//   - Static keys, PSK, and prologue are not implemented.
+//   - Rekey/rotation is simplified.
+//   - Replay defense is nonce-based only.
+//   - See stub/incomplete markers below.
  */
 #include "noise.h"
 #include <openssl/evp.h>
@@ -29,31 +30,96 @@
 #include <stdio.h>
 #include <time.h>
 
-// --- Kyber768 KEM wrappers (stubbed, see [README.md](README.md#post-quantum)) ---
-// NOTE: Kyber768 support is not fully implemented. Only X25519 is functional.
-// These wrappers assume an external Kyber768 C library is linked.
-// See Betanet spec for hybrid handshake details.
+/*
+ * --- PQ Hybrid Handshake Stub ---
+ * This is a stub for PQ hybrid handshake support.
+ * The actual PQ hybrid handshake is NOT implemented.
+ * To enable this stub, define ENABLE_PQ_HYBRID_HANDSHAKE at compile time.
+ * All logic is disabled unless ENABLE_PQ_HYBRID_HANDSHAKE is defined.
+ * See [README.md] for rationale and status.
+ */
+#ifdef ENABLE_PQ_HYBRID_HANDSHAKE
+// PQ hybrid handshake stub (not implemented)
+// This section is intentionally left as a stub.
+// Do NOT use in production. No PQ hybrid handshake logic is present.
+#endif
+/*
+ * --- Kyber768 KEM wrappers (stubbed) ---
+ * PQ hybrid handshake is not implemented; these are placeholders.
+ * See [README.md:397], [technical-overview.md:176] for rationale and mitigation.
+ * Only X25519 is functional.
+ * To enable PQ hybrid, define BETANET_ENABLE_PQ_HYBRID at compile time.
+ */
+#ifdef BETANET_ENABLE_PQ_HYBRID
 #include "kyber768.h" // You must provide this header and link the Kyber768 C implementation
 
+// TODO: Initialize Kyber768 library if required (e.g., PQClean/liboqs setup)
+// void noise_kyber768_init(void) { /* Call PQClean/liboqs init if needed */ }
+// void noise_kyber768_cleanup(void) { /* Call PQClean/liboqs cleanup if needed */ }
+#endif
+
+// PQ hybrid constants (see [README.md:397])
+// Define constants even when PQ hybrid is disabled for struct compilation
 #define KYBER_PUBLICKEYBYTES 1184
 #define KYBER_SECRETKEYBYTES 2400
 #define KYBER_CIPHERTEXTBYTES 1088
 #define KYBER_SHAREDKEYBYTES 32
 
-static int gen_kyber768_keypair(uint8_t *pk, uint8_t *sk) {
+#ifdef BETANET_ENABLE_PQ_HYBRID
+#include "kyber768.h" // You must provide this header and link the Kyber768 C implementation
+
+// TODO: Initialize Kyber768 library if required (e.g., PQClean/liboqs setup)
+// void noise_kyber768_init(void) { /* Call PQClean/liboqs init if needed */ }
+// void noise_kyber768_cleanup(void) { /* Call PQClean/liboqs cleanup if needed */ }
+#endif
+
+/*
+ * PQ hybrid stubs (see [README.md:397], [technical-overview.md:176])
+ * All Kyber768 KEM functions are stubs when PQ hybrid is disabled.
+ */
+#ifdef BETANET_ENABLE_PQ_HYBRID
+static int noise_kyber768_keypair(uint8_t *pk, uint8_t *sk) {
     // Returns 0 on success
     return kyber768_keypair(pk, sk);
 }
 
-static int kyber768_encaps(const uint8_t *pk, uint8_t *ct, uint8_t *ss) {
+static int noise_kyber768_encaps(const uint8_t *pk, uint8_t *ct, uint8_t *ss) {
     // Returns 0 on success
     return kyber768_enc(ct, ss, pk);
 }
 
-static int kyber768_decaps(const uint8_t *ct, const uint8_t *sk, uint8_t *ss) {
+static int noise_kyber768_decaps(const uint8_t *ct, const uint8_t *sk, uint8_t *ss) {
     // Returns 0 on success
     return kyber768_dec(ss, ct, sk);
 }
+#else
+// Stubs for builds without PQ hybrid (see [README.md:397])
+static int noise_kyber768_keypair(uint8_t *pk, uint8_t *sk) { 
+    (void)pk; (void)sk; 
+    // Fill with deterministic data for testing
+    memset(pk, 0xAA, KYBER_PUBLICKEYBYTES);
+    memset(sk, 0xBB, KYBER_SECRETKEYBYTES);
+    return 0; 
+}
+static int noise_kyber768_encaps(const uint8_t *pk, uint8_t *ct, uint8_t *ss) { 
+    (void)pk; 
+    // Fill with deterministic data for testing
+    memset(ct, 0xCC, KYBER_CIPHERTEXTBYTES);
+    memset(ss, 0xDD, KYBER_SHAREDKEYBYTES);
+    return 0; 
+}
+static int noise_kyber768_decaps(const uint8_t *ct, const uint8_t *sk, uint8_t *ss) { 
+    (void)ct; (void)sk; 
+    // Fill with deterministic data for testing
+    memset(ss, 0xDD, KYBER_SHAREDKEYBYTES);
+    return 0; 
+}
+#endif
+
+/*
+/*
+ * === Noise XK Handshake Implementation ===
+ */
 
 // --- Helpers for X25519 and ChaCha20-Poly1305 ---
 // See [README.md](README.md#noise-xk-handshake) for key exchange details.
@@ -149,9 +215,14 @@ cleanup:
     return ret;
 }
 
-// --- Noise XK Handshake (simplified, no static keys/PSK/prologue, see [README.md](README.md#noise-xk-handshake)) ---
+/*
+ * --- Noise XK Handshake ---
+ * Implements handshake per [README.md:155-169], [technical-overview.md:22,44,103,121,125].
+ * PQ hybrid is only enabled if BETANET_ENABLE_PQ_HYBRID is defined ([README.md:397]).
+ * Static keys, PSK, and prologue are not implemented.
+ */
 // NOTE: This implementation omits static keys, PSK, and prologue for simplicity.
-// Kyber768 is stubbed; only X25519 is functional.
+// Kyber768 is stubbed; only X25519 is functional. See [README.md:397], [technical-overview.md:176].
 // See Betanet spec for full handshake flow.
 
 // For demo: static prologue, no PSK, no static keys
@@ -192,9 +263,11 @@ static void hkdf_sha256(const uint8_t *ck, const uint8_t *input, size_t input_le
 
 // --- API Implementation ---
 
-// --- Noise XK handshake initiator (client) ---
-// See [README.md](README.md#noise-xk-handshake)
-// NOTE: Kyber768 is stubbed; only X25519 is functional.
+/*
+ * Noise XK handshake initiator (client)
+ * Implements [README.md:155-169], [technical-overview.md:22,44,103,121,125].
+ * PQ hybrid is only enabled if BETANET_ENABLE_PQ_HYBRID is defined.
+ */
 int noise_channel_handshake_initiator(noise_channel_t* chan, htx_ctx_t* htx) {
     if (!chan || !htx) return -1;
     memset(chan, 0, sizeof(*chan));
@@ -204,35 +277,48 @@ int noise_channel_handshake_initiator(noise_channel_t* chan, htx_ctx_t* htx) {
     uint8_t e_priv[32], e_pub[32];
     if (gen_x25519_keypair(e_priv, e_pub) != 0) return -1;
 
-    // Generate Kyber768 ephemeral keypair (stubbed)
+#ifdef BETANET_ENABLE_PQ_HYBRID
+    // Generate Kyber768 ephemeral keypair
     uint8_t kyber_pk[KYBER_PUBLICKEYBYTES], kyber_sk[KYBER_SECRETKEYBYTES];
-    if (gen_kyber768_keypair(kyber_pk, kyber_sk) != 0) return -1;
+    if (noise_kyber768_keypair(kyber_pk, kyber_sk) != 0) return -1;
+#endif
 
-    // Send e_pub and kyber_pk to responder
-    if (SSL_write(htx->ssl, e_pub, 32) != 32) return -1;
-    if (SSL_write(htx->ssl, kyber_pk, KYBER_PUBLICKEYBYTES) != KYBER_PUBLICKEYBYTES) return -1;
+    // Send e_pub (always)
+    if (SSL_write(htx->state.tcp.ssl, e_pub, 32) != 32) return -1;
+#ifdef BETANET_ENABLE_PQ_HYBRID
+    // Send kyber_pk if PQ hybrid enabled
+    if (SSL_write(htx->state.tcp.ssl, kyber_pk, KYBER_PUBLICKEYBYTES) != KYBER_PUBLICKEYBYTES) return -1;
+#endif
 
-    // Receive re_pub and re_kyber_ct from responder
+    // Receive re_pub (always)
     uint8_t re_pub[32];
-    if (SSL_read(htx->ssl, re_pub, 32) != 32) return -1;
+    if (SSL_read(htx->state.tcp.ssl, re_pub, 32) != 32) return -1;
+#ifdef BETANET_ENABLE_PQ_HYBRID
+    // Receive re_kyber_ct if PQ hybrid enabled
     uint8_t re_kyber_ct[KYBER_CIPHERTEXTBYTES];
-    if (SSL_read(htx->ssl, re_kyber_ct, KYBER_CIPHERTEXTBYTES) != KYBER_CIPHERTEXTBYTES) return -1;
+    if (SSL_read(htx->state.tcp.ssl, re_kyber_ct, KYBER_CIPHERTEXTBYTES) != KYBER_CIPHERTEXTBYTES) return -1;
+#endif
 
     // Perform DH: ee (X25519)
     uint8_t dh[32];
     if (x25519_shared_secret(e_priv, re_pub, dh) != 0) return -1;
 
-    // Kyber768 decapsulation (stubbed)
+#ifdef BETANET_ENABLE_PQ_HYBRID
+    // Kyber768 decapsulation
     uint8_t kyber_ss[KYBER_SHAREDKEYBYTES];
-    if (kyber768_decaps(re_kyber_ct, kyber_sk, kyber_ss) != 0) return -1;
-
+    if (noise_kyber768_decaps(re_kyber_ct, kyber_sk, kyber_ss) != 0) return -1;
     // Derive hybrid secret: concat(dh || kyber_ss)
     uint8_t hybrid_secret[32 + KYBER_SHAREDKEYBYTES];
     memcpy(hybrid_secret, dh, 32);
     memcpy(hybrid_secret + 32, kyber_ss, KYBER_SHAREDKEYBYTES);
-
     // Derive keys (tx_key, rx_key) = HKDF(hybrid_secret)
     hkdf_sha256(hybrid_secret, NULL, 0, chan->tx_key, chan->rx_key);
+    // TODO: Negotiate/fallback if Kyber768 fails or is not supported by peer.
+    // TODO: Add additional tests for hybrid secret derivation.
+#else
+    // Derive keys (tx_key, rx_key) = HKDF(dh)
+    hkdf_sha256(dh, NULL, 0, chan->tx_key, chan->rx_key);
+#endif
 
     chan->handshake_complete = 1;
     chan->tx_nonce = 0;
@@ -240,9 +326,11 @@ int noise_channel_handshake_initiator(noise_channel_t* chan, htx_ctx_t* htx) {
     return 0;
 }
 
-// --- Noise XK handshake responder (server) ---
-// See [README.md](README.md#noise-xk-handshake)
-// NOTE: Kyber768 is stubbed; only X25519 is functional.
+/*
+ * Noise XK handshake responder (server)
+ * Implements [README.md:155-169], [technical-overview.md:22,44,103,121,125].
+ * PQ hybrid is only enabled if BETANET_ENABLE_PQ_HYBRID is defined.
+ */
 int noise_channel_handshake_responder(noise_channel_t* chan, htx_ctx_t* htx) {
     if (!chan || !htx) return -1;
     memset(chan, 0, sizeof(*chan));
@@ -252,19 +340,42 @@ int noise_channel_handshake_responder(noise_channel_t* chan, htx_ctx_t* htx) {
     uint8_t re_priv[32], re_pub[32];
     if (gen_x25519_keypair(re_priv, re_pub) != 0) return -1;
 
-    // Receive e_pub from initiator
+    // Receive e_pub (always)
     uint8_t e_pub[32];
-    if (SSL_read(htx->ssl, e_pub, 32) != 32) return -1;
+    if (SSL_read(htx->state.tcp.ssl, e_pub, 32) != 32) return -1;
+#ifdef BETANET_ENABLE_PQ_HYBRID
+    // Receive kyber_pk if PQ hybrid enabled
+    uint8_t kyber_pk[KYBER_PUBLICKEYBYTES];
+    if (SSL_read(htx->tcp.ssl, kyber_pk, KYBER_PUBLICKEYBYTES) != KYBER_PUBLICKEYBYTES) return -1;
+#endif
 
-    // Send re_pub to initiator
-    if (SSL_write(htx->ssl, re_pub, 32) != 32) return -1;
+    // Send re_pub (always)
+    if (SSL_write(htx->state.tcp.ssl, re_pub, 32) != 32) return -1;
+#ifdef BETANET_ENABLE_PQ_HYBRID
+    // Kyber768 encapsulation
+    uint8_t re_kyber_ct[KYBER_CIPHERTEXTBYTES], re_kyber_ss[KYBER_SHAREDKEYBYTES];
+    if (noise_kyber768_encaps(kyber_pk, re_kyber_ct, re_kyber_ss) != 0) return -1;
+    // Send re_kyber_ct to initiator
+    if (SSL_write(htx->state.tcp.ssl, re_kyber_ct, KYBER_CIPHERTEXTBYTES) != KYBER_CIPHERTEXTBYTES) return -1;
+#endif
 
     // Perform DH: ee (X25519)
     uint8_t dh[32];
     if (x25519_shared_secret(re_priv, e_pub, dh) != 0) return -1;
 
-    // Derive keys (simplified: tx_key = rx_key = HKDF(dh))
+#ifdef BETANET_ENABLE_PQ_HYBRID
+    // Derive hybrid secret: concat(dh || re_kyber_ss)
+    uint8_t hybrid_secret[32 + KYBER_SHAREDKEYBYTES];
+    memcpy(hybrid_secret, dh, 32);
+    memcpy(hybrid_secret + 32, re_kyber_ss, KYBER_SHAREDKEYBYTES);
+    // Derive keys (tx_key, rx_key) = HKDF(hybrid_secret)
+    hkdf_sha256(hybrid_secret, NULL, 0, chan->tx_key, chan->rx_key);
+    // TODO: Negotiate/fallback if Kyber768 fails or is not supported by peer.
+    // TODO: Add additional tests for hybrid secret derivation.
+#else
+    // Derive keys (tx_key, rx_key) = HKDF(dh)
     hkdf_sha256(dh, NULL, 0, chan->tx_key, chan->rx_key);
+#endif
 
     chan->handshake_complete = 1;
     chan->tx_nonce = 0;
@@ -340,7 +451,7 @@ int noise_channel_send(noise_channel_t* chan, const uint8_t* msg, size_t msg_len
     memcpy(frame + 14, ciphertext, clen);
     memcpy(frame + 14 + clen, tag, 16);
 
-    int sent = SSL_write(chan->htx->ssl, frame, 2 + 12 + clen + 16);
+    int sent = SSL_write(chan->htx->state.tcp.ssl, frame, 2 + 12 + clen + 16);
 
     // Update counters
     chan->tx_bytes += msg_len;
@@ -352,13 +463,13 @@ int noise_channel_send(noise_channel_t* chan, const uint8_t* msg, size_t msg_len
 int noise_channel_recv(noise_channel_t* chan, uint8_t* out, size_t max_len, size_t* out_len) {
     if (!chan || !chan->handshake_complete) return -1;
     uint8_t hdr[2 + 12];
-    int r = SSL_read(chan->htx->ssl, hdr, 14);
+    int r = SSL_read(chan->htx->state.tcp.ssl, hdr, 14);
     if (r != 14) return -2;
     uint16_t frame_len = hdr[0] | (hdr[1] << 8);
     if (frame_len > 4096 + 16) return -3;
     uint8_t* ciphertext = malloc(frame_len);
     if (!ciphertext) return -4;
-    r = SSL_read(chan->htx->ssl, ciphertext, frame_len);
+    r = SSL_read(chan->htx->state.tcp.ssl, ciphertext, frame_len);
     if (r != frame_len) { free(ciphertext); return -5; }
     uint8_t* tag = ciphertext + (frame_len - 16);
 

@@ -5,10 +5,79 @@
 #include <stdio.h>
 #include <time.h>
 
+/* =========================
+ * PoW Challenge Structure
+ * =========================
+ * Represents a Proof-of-Work challenge for anti-abuse and admission control.
+ * TODO: Move to a shared header if needed by multiple modules.
+ */
+typedef struct {
+    uint64_t nonce;         // Nonce value to be found by client
+    uint32_t difficulty;    // Difficulty parameter (number of leading zeros, etc.)
+    uint64_t timestamp;     // Challenge creation time (epoch seconds)
+    char client_id[64];     // Unique client/requestor identifier (peer_id, address, etc.)
+} pay_pow_challenge_t;
+
+/**
+ * Generate a PoW challenge for a given peer/keyset.
+ * TODO: Make difficulty configurable.
+ * TODO: Store issued challenges for verification.
+ */
+int pay_pow_generate_challenge(pay_pow_challenge_t* challenge, const char* client_id, uint32_t difficulty) {
+    if (!challenge || !client_id) return -1;
+    challenge->nonce = ((uint64_t)rand() << 32) | rand();
+    challenge->difficulty = difficulty;
+    challenge->timestamp = (uint64_t)time(NULL);
+    strncpy(challenge->client_id, client_id, sizeof(challenge->client_id) - 1);
+    challenge->client_id[sizeof(challenge->client_id) - 1] = '\0';
+    // TODO: Store challenge in a map/list for later verification.
+    // TODO: Integrate with pay_rate_limit_entry_t tracking.
+    return 0;
+}
+
+/**
+ * Verify a PoW solution for a given challenge.
+ * Returns 0 if valid, nonzero otherwise.
+ * TODO: Use a real hash function (SHA256 or similar).
+ * TODO: Enforce expiration and replay protection.
+ */
+int pay_pow_verify_solution(const pay_pow_challenge_t* challenge, uint64_t solution_nonce) {
+    if (!challenge) return -1;
+    // Simple stub: require (nonce ^ solution_nonce) has N leading zero bits
+    uint64_t v = challenge->nonce ^ solution_nonce;
+    int leading_zeros = 0;
+    for (int i = 63; i >= 0; --i) {
+        if ((v >> i) & 1) break;
+        leading_zeros++;
+    }
+    if (leading_zeros >= (int)challenge->difficulty) {
+        // TODO: Remove challenge from map/list after successful verification.
+        // TODO: Update rate-limit entry for client_id.
+        return 0;
+    }
+    return -1;
+}
+// TODO: Add unit tests for PoW challenge generation and verification.
+// TODO: Enforce PoW in admission/rate-limit logic.
+
+/* =========================
+ * Rate-Limit Tracking Structure
+ * =========================
+ * Tracks per-keyset and per-peer rate-limiting state.
+ * TODO: Move to a shared header if needed by multiple modules.
+ */
+typedef struct {
+    uint8_t keyset_id[32];      // Keyset identifier
+    uint8_t peer_id[32];        // Peer identifier (or hash)
+    uint64_t last_request_ts;   // Timestamp of last request
+    uint32_t request_count;     // Number of requests in current window
+    // TODO: Add sliding window or token bucket fields as needed
+} pay_rate_limit_entry_t;
+
 // Internal rate-limit structure (opaque)
 struct pay_rate_limit_s {
+    // TODO: Implement per-keyset and per-peer buckets using pay_rate_limit_entry_t
     int dummy; // Placeholder member to avoid empty struct error
-    // TODO: Implement per-keyset and per-peer buckets
 };
 
 static pay_rate_limit_t *g_rate_limit = NULL;
@@ -82,9 +151,32 @@ void betanet_pay_cleanup(void) {
     pay_cleanup();
 }
 
+/* =========================
+ * PoW/Rate-Limits Partial Stub
+ * =========================
+ * PoW/rate-limits partially stubbed - not fully implemented.
+ * These are placeholders for future integration.
+ */
+
+/**
+ * pay_pow_rate_limit_stub
+ * PoW/rate-limits partially stubbed - not fully implemented.
+ * Intended for future Proof-of-Work and rate-limiting integration.
+ */
+void pay_pow_rate_limit_stub(const uint8_t *keyset_id, const uint8_t *peer_id) {
+    // PoW/rate-limits partially stubbed - not fully implemented.
+    // TODO: Generate PoW challenge for peer_id/keyset_id if rate-limit exceeded.
+    // TODO: Verify PoW solution submitted by client.
+    // TODO: Enforce rate-limits using pay_rate_limit_entry_t.
+    (void)keyset_id;
+    (void)peer_id;
+}
+
 // Enforce per-keyset and per-peer rate-limits
 int pay_check_rate_limit(const uint8_t *keyset_id, const uint8_t *peer_id) {
-    // TODO: Implement token bucket or sliding window per keyset and per peer
+    // TODO: Implement token bucket or sliding window per keyset and per peer using pay_rate_limit_entry_t.
+    // TODO: Track timestamps and counters for each peer/keyset.
+    // TODO: Integrate PoW challenge generation and verification if rate-limit exceeded.
     // For now, always allow
     (void)keyset_id;
     (void)peer_id;

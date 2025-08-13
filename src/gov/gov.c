@@ -172,3 +172,165 @@ betanet_gov_result_t betanet_gov_check_compliance(
     if (d != BETANET_GOV_OK) return d;
     return BETANET_GOV_OK;
 }
+/* Governance logic stub - not implemented.
+ * This section is a placeholder for future governance logic.
+ * Governance logic not implemented.
+ */
+/**
+ * Governance proposal and vote structures.
+ * These are the core data types for on-chain governance logic.
+ */
+
+#include <stdint.h>
+#include <stddef.h>
+
+// Enum for proposal status/state
+typedef enum {
+    BETANET_PROPOSAL_PENDING = 0,
+    BETANET_PROPOSAL_ACTIVE,
+    BETANET_PROPOSAL_ACCEPTED,
+    BETANET_PROPOSAL_REJECTED,
+    BETANET_PROPOSAL_EXECUTED,
+    BETANET_PROPOSAL_EXPIRED
+} betanet_proposal_status_t;
+
+// Enum for vote choice
+typedef enum {
+    BETANET_VOTE_NONE = 0,
+    BETANET_VOTE_YES,
+    BETANET_VOTE_NO,
+    BETANET_VOTE_ABSTAIN
+} betanet_vote_choice_t;
+
+// Structure for a single vote record
+typedef struct {
+    uint64_t voter_id;                // Node or participant ID
+    betanet_vote_choice_t choice;     // Vote choice
+    float weight;                     // Voting weight at time of vote
+    time_t timestamp;                 // When the vote was cast
+} betanet_vote_record_t;
+
+// Structure for a governance proposal
+typedef struct {
+    uint64_t proposal_id;             // Unique proposal identifier
+    uint64_t proposer_id;             // Who submitted the proposal
+    time_t created_at;                // Proposal creation time
+    time_t expires_at;                // Expiry time for voting
+    betanet_proposal_status_t status; // Current status/state
+    void* payload;                    // Pointer to proposal payload (type depends on proposal)
+    size_t payload_size;              // Size of payload
+    betanet_vote_record_t* votes;     // Array of votes (dynamic or fixed-size)
+    size_t vote_count;                // Number of votes
+    // TODO: Add execution result, audit trail, etc.
+} betanet_proposal_t;
+
+/**
+ * Submit a vote for a proposal.
+ * Returns 0 on success, -1 on error (e.g., expired, already voted).
+ */
+int betanet_gov_submit_vote(betanet_proposal_t* proposal, uint64_t voter_id, betanet_vote_choice_t choice, float weight, time_t now) {
+    if (!proposal || proposal->status != BETANET_PROPOSAL_ACTIVE || now > proposal->expires_at)
+        return -1;
+    // Check for duplicate vote
+    for (size_t i = 0; i < proposal->vote_count; ++i) {
+        if (proposal->votes[i].voter_id == voter_id)
+            return -1;
+    }
+    // Record vote
+    betanet_vote_record_t* new_votes = (betanet_vote_record_t*)realloc(proposal->votes, sizeof(betanet_vote_record_t) * (proposal->vote_count + 1));
+    if (!new_votes) return -1;
+    proposal->votes = new_votes;
+    proposal->votes[proposal->vote_count].voter_id = voter_id;
+    proposal->votes[proposal->vote_count].choice = choice;
+    proposal->votes[proposal->vote_count].weight = weight;
+    proposal->votes[proposal->vote_count].timestamp = now;
+    proposal->vote_count += 1;
+    return 0;
+}
+
+/**
+ * Tally votes for a proposal.
+ * Returns YES/NO/ABSTAIN counts and weights.
+ */
+void betanet_gov_tally_votes(const betanet_proposal_t* proposal, size_t* yes_count, float* yes_weight,
+                             size_t* no_count, float* no_weight,
+                             size_t* abstain_count, float* abstain_weight) {
+    if (!proposal) return;
+    *yes_count = *no_count = *abstain_count = 0;
+    *yes_weight = *no_weight = *abstain_weight = 0.0f;
+    for (size_t i = 0; i < proposal->vote_count; ++i) {
+        switch (proposal->votes[i].choice) {
+            case BETANET_VOTE_YES:
+                (*yes_count)++;
+                *yes_weight += proposal->votes[i].weight;
+                break;
+            case BETANET_VOTE_NO:
+                (*no_count)++;
+                *no_weight += proposal->votes[i].weight;
+                break;
+            case BETANET_VOTE_ABSTAIN:
+                (*abstain_count)++;
+                *abstain_weight += proposal->votes[i].weight;
+                break;
+            default:
+                break;
+        }
+    }
+}
+
+/**
+ * Update proposal status based on tally and thresholds.
+ * Returns 1 if status changed, 0 otherwise.
+ * TODO: Integrate with governance thresholds and context.
+ */
+int betanet_gov_update_proposal_status(betanet_proposal_t* proposal, float total_weight, float threshold, time_t now) {
+    if (!proposal || proposal->status != BETANET_PROPOSAL_ACTIVE)
+        return 0;
+    if (now < proposal->expires_at)
+        return 0; // Voting still open
+    size_t yes_count, no_count, abstain_count;
+    float yes_weight, no_weight, abstain_weight;
+    betanet_gov_tally_votes(proposal, &yes_count, &yes_weight, &no_count, &no_weight, &abstain_count, &abstain_weight);
+    if (yes_weight >= threshold * total_weight)
+        proposal->status = BETANET_PROPOSAL_ACCEPTED;
+    else
+        proposal->status = BETANET_PROPOSAL_REJECTED;
+    // TODO: Hook for proposal execution after acceptance
+    // TODO: Record audit/history entry for status transition
+    return 1;
+}
+
+// TODO: Add hooks for proposal execution after acceptance.
+// TODO: Add querying for proposal history and audit trails.
+
+#include <stdio.h>
+
+/**
+ * Stub: Load governance config from file or buffer (deferred).
+ * Not implemented. Returns -1.
+ */
+int betanet_gov_config_load(betanet_gov_config_t* cfg, const char* path) {
+    (void)cfg; (void)path;
+    // Deferred: config loading not implemented.
+    return -1;
+}
+
+/**
+ * Stub: Validate governance config (deferred).
+ * Not implemented. Returns -1.
+ */
+int betanet_gov_config_validate(const betanet_gov_config_t* cfg) {
+    (void)cfg;
+    // Deferred: config validation not implemented.
+    return -1;
+}
+
+/**
+ * Stub: Apply governance config to context (deferred).
+ * Not implemented. Returns -1.
+ */
+int betanet_gov_config_apply(betanet_gov_context_t* ctx, const betanet_gov_config_t* cfg) {
+    (void)ctx; (void)cfg;
+    // Deferred: config application not implemented.
+    return -1;
+}

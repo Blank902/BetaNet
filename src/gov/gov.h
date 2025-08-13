@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <time.h>
+#include "../path/naming.h"  // For betanet_alias_validation_t and betanet_quorum_cert_t
 
 #define BETANET_MAX_AS_GROUPS 256
 #define BETANET_MAX_ORGS 128
@@ -45,6 +46,21 @@ typedef struct {
     size_t signer_count;
 } betanet_gov_quorum_cert_t;
 
+// Additional types for governance functions
+typedef struct {
+    uint64_t proposal_id;
+    uint8_t proposal_hash[32];
+    time_t created_time;
+    time_t voting_deadline;
+    int status; // 0=pending, 1=passed, -1=failed
+} betanet_proposal_t;
+
+typedef enum {
+    BETANET_VOTE_YES = 1,
+    BETANET_VOTE_NO = 0,
+    BETANET_VOTE_ABSTAIN = -1
+} betanet_vote_choice_t;
+
 typedef enum {
     BETANET_GOV_OK = 0,
     BETANET_GOV_ERR_QUORUM = -1,
@@ -84,5 +100,59 @@ betanet_gov_result_t betanet_gov_check_compliance(
     uint64_t required_weight,
     time_t alias_last_finalized_time
 );
+
+/**
+ * Governance configuration stub (deferred).
+ * This struct is reserved for future governance logic and parameterization.
+ * All fields and logic are subject to future specification and integration.
+ */
+typedef struct {
+    // Placeholder for future governance parameters (e.g., caps, thresholds, feature flags)
+    // Example fields (commented out, to be defined in future milestones):
+    // float as_cap;
+    // float org_cap;
+    // uint32_t min_quorum_as;
+    // uint32_t min_quorum_isd;
+    // time_t upgrade_delay_days;
+    // Add additional fields as needed for governance parameterization.
+    int _deferred; // Marker field; not used.
+} betanet_gov_config_t;
+
+/**
+ * Stub: Load governance config from file or buffer (deferred).
+ * Returns 0 on success, -1 on error. Not implemented.
+ */
+int betanet_gov_config_load(betanet_gov_config_t* cfg, const char* path);
+
+/**
+ * Stub: Validate governance config (deferred).
+ * Returns 0 if valid, -1 if invalid. Not implemented.
+ */
+int betanet_gov_config_validate(const betanet_gov_config_t* cfg);
+
+/**
+ * Stub: Apply governance config to context (deferred).
+ * Returns 0 on success, -1 on error. Not implemented.
+ */
+int betanet_gov_config_apply(betanet_gov_context_t* ctx, const betanet_gov_config_t* cfg);
+
+/**
+ * Submit a vote for a proposal.
+ * Returns 0 on success, -1 on error.
+ */
+int betanet_gov_submit_vote(betanet_proposal_t* proposal, uint64_t voter_id, betanet_vote_choice_t choice, float weight, time_t now);
+
+/**
+ * Tally votes for a proposal.
+ */
+void betanet_gov_tally_votes(const betanet_proposal_t* proposal, size_t* yes_count, float* yes_weight,
+                             size_t* no_count, float* no_weight,
+                             size_t* abstain_count, float* abstain_weight);
+
+/**
+ * Update proposal status based on tally and thresholds.
+ * Returns 1 if status changed, 0 otherwise.
+ */
+int betanet_gov_update_proposal_status(betanet_proposal_t* proposal, float total_weight, float threshold, time_t now);
 
 #endif // BETANET_GOV_H

@@ -1,8 +1,8 @@
-// Naming, trust, and alias ledger API
-#include "naming.h"
 #ifndef PATH_H
 #define PATH_H
 
+// Naming, trust, and alias ledger API
+#include "naming.h"
 #include <stdint.h>
 #include <stddef.h>
 
@@ -35,6 +35,13 @@ typedef enum {
     BETANET_PRIVACY_PERFORMANCE = 2
 } betanet_privacy_mode_t;
 
+typedef enum {
+    BETANET_PATH_STATE_UNKNOWN = 0,
+    BETANET_PATH_STATE_HEALTHY = 1,
+    BETANET_PATH_STATE_DEGRADED = 2,
+    BETANET_PATH_STATE_FAILED = 3
+} betanet_path_state_t;
+
 typedef struct {
     betanet_path_type_t type;
     uint8_t scion_header[64]; // Enough for SCION header, adjust as needed
@@ -43,17 +50,48 @@ typedef struct {
     uint64_t last_probe_ts;
     int is_active;
 
+    // Multipath: path state and health metrics
+    betanet_path_state_t state;      // Current state of the path (healthy, degraded, etc.)
+    float last_latency_ms;           // Last measured latency (ms)
+    float last_loss_rate;            // Last measured packet loss rate (0.0–1.0)
+    uint64_t last_health_check_ts;   // Timestamp of last health check
+
+    // TODO: Add more health metrics as needed (e.g., jitter, throughput).
+
     // Mixnet privacy layer
     betanet_mixnet_hop_t mixnet_hops[BETANET_MAX_MIXNET_HOPS];
     size_t mixnet_hop_count;
     betanet_privacy_mode_t privacy_mode;
     float peer_trust_score;
+
+    // TODO: Add multipath-specific fields if needed (e.g., usage stats, failover counters).
 } betanet_path_t;
 
+/**
+ * Path selection policy for multipath routing.
+ * Extend as needed for more advanced policies.
+ */
+typedef enum {
+    BETANET_PATH_POLICY_DEFAULT = 0,
+    BETANET_PATH_POLICY_ROUND_ROBIN,
+    BETANET_PATH_POLICY_LOW_LATENCY,
+    BETANET_PATH_POLICY_LOAD_BALANCE
+    // TODO: Add more policies as needed
+} betanet_path_policy_t;
+
 typedef struct {
+    // Multipath: support multiple concurrently active paths per session.
     betanet_path_t paths[BETANET_MAX_PATHS];
     size_t count;
-    size_t active_index; // currently selected path
+
+    // Multipath: indices of currently active paths (for concurrent use).
+    size_t active_indices[BETANET_MAX_PATHS];
+    size_t num_active; // number of active paths
+
+    // Path selection policy for this session.
+    betanet_path_policy_t selection_policy;
+
+    // TODO: Add per-session multipath state as needed.
 } betanet_path_list_t;
 
 /**

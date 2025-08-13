@@ -1,6 +1,15 @@
 #ifndef BETANET_H
 #define BETANET_H
 
+/**
+ * Feature flag for PQ hybrid handshake (X25519+Kyber768).
+ * When enabled, Betanet attempts a post-quantum hybrid handshake (stub only; not implemented).
+ * This is disabled by default due to dependency on external PQ libraries and evolving standards.
+ * Enable by defining BETANET_ENABLE_PQ_HYBRID as 1 at compile time.
+ * See README.md and technical-overview.md for details.
+ */
+// #define BETANET_ENABLE_PQ_HYBRID 0
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -34,16 +43,71 @@ typedef enum {
     BETANET_TRANSPORT_QUIC = 1
 } betanet_transport_t;
 
-// Betanet context management
+/**
+ * Create a new Betanet context with the specified transport.
+ * See Betanet Spec §5.1, §5.5, §5.6.
+ */
 htx_ctx_t* betanet_ctx_create_with_transport(betanet_transport_t transport);
-htx_ctx_t* betanet_ctx_create(void); // legacy, defaults to TCP
+
+/**
+ * Create a new Betanet context (defaults to TCP).
+ */
+htx_ctx_t* betanet_ctx_create(void);
+
+/**
+ * Free a Betanet context.
+ */
 void betanet_ctx_free(htx_ctx_t* ctx);
 
-// Connect to a peer using a ticket (client)
+/**
+ * Set a generic option on the Betanet context.
+ * Stub for future extensibility (see technical-overview.md §5, §8).
+ * Returns 0 on success, -1 on error.
+ */
+static inline int betanet_set_option(htx_ctx_t* ctx, int option, const void* value, size_t value_len) {
+    (void)ctx; (void)option; (void)value; (void)value_len;
+    return -1; // Not implemented
+}
+
+/**
+ * Set fingerprint tuning profile (JA3/JA4, SETTINGS, extension order).
+ * Stub for future use. See Betanet Spec §5.1, §5.5.
+ */
+static inline void betanet_set_fingerprint_profile(htx_ctx_t* ctx, int profile_id) {
+    if (ctx) htx_set_fingerprint_profile(ctx, profile_id);
+}
+
+/**
+ * Connect to a peer using a ticket (client).
+ * Returns 0 on success, -1 on error.
+ */
 int betanet_connect_with_ticket(htx_ctx_t* ctx, const char* host, uint16_t port, const char* ticket_str);
 
-// Accept a peer using a ticket (server stub)
+/**
+ * Accept a peer using a ticket (server stub).
+ * Returns 0 on success, -1 on error.
+ */
 int betanet_accept_with_ticket(htx_ctx_t* ctx, const char* ticket_str);
+
+/**
+ * Send data on the secure stream (wrapper for betanet_secure_send).
+ * Returns number of bytes sent, or -1 on error.
+ */
+static inline int betanet_send(htx_ctx_t* ctx, const uint8_t* data, size_t len) {
+    // Stub: should route to the active noise_channel_t for ctx
+    (void)ctx; (void)data; (void)len;
+    return -1;
+}
+
+/**
+ * Receive data from the secure stream (wrapper for betanet_secure_recv).
+ * Returns number of bytes received, or -1 on error.
+ */
+static inline int betanet_recv(htx_ctx_t* ctx, uint8_t* out, size_t max_len) {
+    // Stub: should route to the active noise_channel_t for ctx
+    (void)ctx; (void)out; (void)max_len;
+    return -1;
+}
 
 // Connection status
 int betanet_is_connected(htx_ctx_t* ctx);

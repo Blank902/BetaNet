@@ -25,7 +25,20 @@ typedef struct {
     uint32_t idle_timeout_max_ms;
     uint32_t idle_padding_max;
     float priority_emit_prob; // Probability [0,1] to emit PRIORITY frame
-    // Future: add HTTP2 SETTINGS mirroring, fingerprinting fields, etc.
+
+    // HTTP/2 SETTINGS mirroring (origin-mirrored values)
+    uint32_t h2_settings_max_concurrent_streams;
+    uint32_t h2_settings_initial_window_size;
+    uint32_t h2_settings_max_frame_size;
+    uint32_t h2_settings_max_header_list_size;
+    uint32_t h2_settings_header_table_size;
+
+    // SETTINGS tolerances (percent, e.g. 15 for ±15%)
+    uint8_t h2_settings_tolerance_percent;
+
+    // PING cadence (ms) and jitter percent (e.g. 10 for ±10%)
+    uint32_t ping_cadence_base_ms;
+    uint8_t ping_cadence_jitter_percent;
 } shape_config_t;
 /**
  * Initialize shaping config with a profile.
@@ -38,6 +51,12 @@ void shape_config_init(shape_config_t* cfg, shape_profile_t profile);
 int shape_apply_padding(const shape_config_t* cfg, uint8_t* buf, size_t len, size_t max_len);
 // Get next keepalive interval (with jitter)
 uint32_t shape_next_keepalive(const shape_config_t* cfg);
+
+// Get randomized PING cadence (ms) with ±jitter_percent
+uint32_t shape_next_ping_cadence(const shape_config_t* cfg);
+
+// Check if a SETTINGS value is within tolerance of the mirrored origin value
+int shape_settings_within_tolerance(uint32_t mirrored, uint32_t origin, uint8_t tolerance_percent);
 
 /**
  * Get random idle timeout (ms) for sending dummy DATA if idle.

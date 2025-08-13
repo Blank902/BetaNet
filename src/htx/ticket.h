@@ -4,18 +4,16 @@
 /*
  * Ticket structure and replay prevention API.
  *
- * This header defines the ticket structure and stub APIs for ticket parsing,
- * validation, replay prevention, and related logic as described in the Betanet
- * specification ([`README.md`](../README.md:115), section "Ticket Handling and Replay Prevention").
+ * Implements ticket parsing, validation, and replay prevention as per:
+ *   - README.md 127-154, 395-396
+ *   - technical-overview.md 25, 65, 105, 120, 160
  *
- * Features required by the spec but NOT YET IMPLEMENTED:
- *   - Ticket structure and cryptographic validation
- *   - Replay cache for duplicate rejection
- *   - Per-prefix rate-limiting
+ * Features deferred or stubbed (feature flags):
+ *   - Cryptographic validation of accessTicket
+ *   - Per-prefix (IPv4 /24, IPv6 /56) rate-limiting (stub)
+ *   - Distributed replay tracking
  *   - Ticket rotation logic
  *   - Persistent storage of replay cache
- *
- * All functions below are stubs. See the Betanet spec for details.
  */
 
 #include <stdint.h>
@@ -26,19 +24,23 @@ extern "C" {
 #endif
 
 /*
- * htx_ticket_t: Opaque ticket structure.
- * Actual ticket format, cryptographic fields, and validation logic are
- * not implemented. See Betanet spec for required fields.
+ * htx_ticket_t: Ticket structure.
+ * Fields as per README.md 151:
+ *   - version (1B)
+ *   - cliPub32 (32B)
+ *   - ticketKeyID8 (8B)
+ *   - nonce32 (32B)
+ *   - accessTicket32 (32B)
+ *   - padding (24..64B)
  */
 typedef struct htx_ticket_s {
-    uint8_t data[256]; // Placeholder for ticket data (size TBD by spec)
-    size_t len;        // Actual length of ticket data
+    uint8_t data[256];
+    size_t len;
 } htx_ticket_t;
-
 /*
  * htx_ticket_parse:
  * Parse a ticket from a string or buffer.
- * Not implemented. Should parse fields as per Betanet spec.
+ * Enforces field order and padding as per README.md 151.
  * Returns 0 on success, negative on error.
  */
 int htx_ticket_parse(const char* input, htx_ticket_t* ticket);
@@ -46,7 +48,8 @@ int htx_ticket_parse(const char* input, htx_ticket_t* ticket);
 /*
  * htx_ticket_validate:
  * Validate a ticket's structure and cryptographic signature.
- * Not implemented. Should perform all checks required by the spec.
+ * Checks carrier, field order, and padding as per README.md 151-152.
+ * Cryptographic validation is stubbed (feature flag).
  * Returns 1 if valid, 0 if invalid, negative on error.
  */
 int htx_ticket_validate(const htx_ticket_t* ticket);
@@ -54,10 +57,12 @@ int htx_ticket_validate(const htx_ticket_t* ticket);
 /*
  * htx_ticket_check_replay:
  * Check if a ticket is a replay (duplicate) and enforce per-prefix rate-limiting.
- * Not implemented. Should use a replay cache and rate-limiting logic as per spec.
- * Returns 1 if not a replay, 0 if duplicate/replayed, negative on error.
+ * Implements (cliPub, hour) tuple replay window as per README.md 148-150.
+ * Per-prefix rate-limiting is stubbed (always allows).
+ * Returns 0 if not a replay, 1 if duplicate/replayed, 2 if rate-limited, negative on error.
  */
 int htx_ticket_check_replay(const htx_ticket_t* ticket);
+
 
 #ifdef __cplusplus
 }

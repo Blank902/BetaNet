@@ -1,0 +1,13 @@
+C:/Users/xxlmn/Documents/BetaNet/build/CMakeFiles/RUN_TESTS.dir
+C:/Users/xxlmn/Documents/BetaNet/build/CMakeFiles/ALL_BUILD.dir
+C:/Users/xxlmn/Documents/BetaNet/build/CMakeFiles/ZERO_CHECK.dir
+C:/Users/xxlmn/Documents/BetaNet/build/libbetanetc/CMakeFiles/betanetc.dir
+C:/Users/xxlmn/Documents/BetaNet/build/libbetanetc/CMakeFiles/RUN_TESTS.dir
+C:/Users/xxlmn/Documents/BetaNet/build/cli/bnetc-cli/CMakeFiles/bnetc-cli.dir
+C:/Users/xxlmn/Documents/BetaNet/build/cli/bnetc-cli/CMakeFiles/RUN_TESTS.dir
+C:/Users/xxlmn/Documents/BetaNet/build/tests/unit/CMakeFiles/fingerprint_regression_test.dir
+C:/Users/xxlmn/Documents/BetaNet/build/tests/unit/CMakeFiles/protocol_regression_test.dir
+C:/Users/xxlmn/Documents/BetaNet/build/tests/unit/CMakeFiles/ticket_parser_fuzz.dir
+C:/Users/xxlmn/Documents/BetaNet/build/tests/unit/CMakeFiles/RUN_TESTS.dir
+C:/Users/xxlmn/Documents/BetaNet/build/tests/interop/CMakeFiles/interop_protocol_test.dir
+C:/Users/xxlmn/Documents/BetaNet/build/tests/interop/CMakeFiles/RUN_TESTS.dir

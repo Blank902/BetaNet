@@ -20,77 +20,98 @@ int htx_ticket_parse(const char* input, htx_ticket_t* ticket) {
     if (!input || !ticket) return -1;
     size_t len = strlen(input);
     if (len > sizeof(ticket->data)) len = sizeof(ticket->data);
-    // Enforce minimum ticket length (e.g., 16 bytes) and variable padding (last byte = padding length)
-    if (len < 16) return -2;
-    uint8_t padlen = (uint8_t)input[len-1];
-    if (padlen > len-1) return -3; // invalid padding
-    // Optionally: check all padding bytes are zero (or a pattern)
-    for (size_t i = len - padlen; i < len - 1; ++i) {
-        if (input[i] != 0x00) return -4; // nonzero padding
+    // Enforce minimum ticket length (1+32+8+32+32+24 = 129), max 1+32+8+32+32+64 = 169
+    if (len < 129 || len > 169) return -2;
+    // Parse fields in order
+    size_t offset = 0;
+    uint8_t version = (uint8_t)input[offset++];
+    if (version != 0x01) return -3;
+    offset += 32; // cliPub32
+    offset += 8;  // ticketKeyID8
+    offset += 32; // nonce32
+    offset += 32; // accessTicket32
+    size_t padlen = len - offset;
+    if (padlen < 24 || padlen > 64) return -4;
+    for (size_t i = offset; i < len; ++i) {
+        if (input[i] != 0x00) return -5;
     }
     memcpy(ticket->data, input, len);
     ticket->len = len;
     return 0;
 }
 
-// Validate a ticket: check carrier, length, and padding
+// Validate a ticket: check carrier, field order, and padding as per spec.
 int htx_ticket_validate(const htx_ticket_t* ticket) {
-    if (!ticket || ticket->len < 16) return 0;
+    if (!ticket || ticket->len < 129 || ticket->len > 169) return 0;
     uint8_t carrier;
     if (htx_ticket_negotiate_carrier(ticket, &carrier) != 0) return 0;
-    uint8_t padlen = ticket->data[ticket->len-1];
-    if (padlen > ticket->len-1) return 0;
-    for (size_t i = ticket->len - padlen; i < ticket->len - 1; ++i) {
+    size_t offset = 0;
+    uint8_t version = ticket->data[offset++];
+    if (version != 0x01) return 0;
+    offset += 32; // cliPub32
+    offset += 8;  // ticketKeyID8
+    offset += 32; // nonce32
+    offset += 32; // accessTicket32
+    size_t padlen = ticket->len - offset;
+    if (padlen < 24 || padlen > 64) return 0;
+    for (size_t i = offset; i < ticket->len; ++i) {
         if (ticket->data[i] != 0x00) return 0;
     }
+    // Cryptographic validation is a stub (feature flag)
     return 1; // valid
 }
 
 #include <stdint.h>
 #include <stdlib.h>
 
-// Simple in-memory replay cache and rate-limiter (not thread-safe, not persistent)
-#define MAX_TICKET_CACHE 128
-#define MAX_TICKET_RATE 16
-#define TICKET_RATE_WINDOW_SEC 5
 
-static uint8_t ticket_cache[MAX_TICKET_CACHE][256];
-static size_t ticket_cache_len[MAX_TICKET_CACHE] = {0};
-static time_t ticket_cache_time[MAX_TICKET_CACHE] = {0};
+// Replay prevention using (cliPub, hour) tuples and a 2-hour window.
+// Per-prefix rate-limiting is not yet implemented (stub).
+// These declarations moved to file scope to avoid shadowing and type errors.
+#define MAX_TICKET_CACHE 256
+#define REPLAY_WINDOW_SEC (2 * 60 * 60)
+
+typedef struct {
+    uint8_t cliPub[32];
+    uint64_t hour;
+    time_t timestamp;
+} ticket_replay_entry_t;
+
+static ticket_replay_entry_t ticket_cache[MAX_TICKET_CACHE];
 static size_t ticket_cache_count = 0;
 
-// Simple rate-limiter: allow MAX_TICKET_RATE tickets per window
-static time_t ticket_rate_times[MAX_TICKET_RATE] = {0};
-static size_t ticket_rate_idx = 0;
-
-static int htx_ticket_rate_limit() {
+static int extract_cliPub_hour(const htx_ticket_t* ticket, uint8_t* cliPub, uint64_t* hour_out) {
+    if (!ticket || ticket->len < 129) return -1;
+    memcpy(cliPub, ticket->data + 1, 32);
     time_t now = time(NULL);
-    size_t count = 0;
-    for (size_t i = 0; i < MAX_TICKET_RATE; ++i) {
-        if (now - ticket_rate_times[i] < TICKET_RATE_WINDOW_SEC) count++;
-    }
-    if (count >= MAX_TICKET_RATE) return -1; // rate limit exceeded
-    ticket_rate_times[ticket_rate_idx] = now;
-    ticket_rate_idx = (ticket_rate_idx + 1) % MAX_TICKET_RATE;
+    *hour_out = (uint64_t)(now / 3600);
     return 0;
 }
 
-// Replay prevention check with rate-limiting
+static int htx_ticket_perprefix_rate_limit(/*const char* ip*/) {
+    // TODO: Implement per-/24 IPv4 and /56 IPv6 token buckets
+    // Spec: README.md 150, technical-overview.md 105
+    return 0;
+}
+
 int htx_ticket_check_replay(const htx_ticket_t* ticket) {
     if (!ticket) return -1;
-    if (htx_ticket_rate_limit() != 0) return 2; // rate limit exceeded
-    // Check for replay
+    if (htx_ticket_perprefix_rate_limit() != 0) return 2; // rate limit exceeded (stub)
+    uint8_t cliPub[32];
+    uint64_t hour;
+    if (extract_cliPub_hour(ticket, cliPub, &hour) != 0) return -2;
+    time_t now = time(NULL);
     for (size_t i = 0; i < ticket_cache_count && i < MAX_TICKET_CACHE; ++i) {
-        if (ticket_cache_len[i] == ticket->len &&
-            memcmp(ticket_cache[i], ticket->data, ticket->len) == 0) {
+        if (memcmp(ticket_cache[i].cliPub, cliPub, 32) == 0 &&
+            ticket_cache[i].hour == hour &&
+            (now - ticket_cache[i].timestamp) < REPLAY_WINDOW_SEC) {
             return 1; // replay detected
         }
     }
-    // Store ticket
     size_t idx = ticket_cache_count % MAX_TICKET_CACHE;
-    memcpy(ticket_cache[idx], ticket->data, ticket->len);
-    ticket_cache_len[idx] = ticket->len;
-    ticket_cache_time[idx] = time(NULL);
+    memcpy(ticket_cache[idx].cliPub, cliPub, 32);
+    ticket_cache[idx].hour = hour;
+    ticket_cache[idx].timestamp = now;
     ticket_cache_count++;
     return 0; // not a replay
 }

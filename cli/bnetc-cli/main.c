@@ -5,14 +5,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
-#ifdef _WIN32
-#include <windows.h>
-#else
-#include <pthread.h>
-#include <unistd.h>
-#endif
 
 #include "betanet/betanet.h"
+#include "../../src/util/platform.h"
 
 #define DEMO_PORT 44443
 #define DEMO_HOST "127.0.0.1"
@@ -21,7 +16,7 @@
 #ifdef _WIN32
 DWORD WINAPI server_thread(LPVOID arg) {
 #else
-void* server_thread(void* arg) {
+thread_return_t server_thread(void* arg) {
 #endif
     printf("[server] Starting server peer...\n");
     htx_ctx_t* srv_ctx = betanet_ctx_create_with_transport(BETANET_TRANSPORT_TCP);
@@ -79,14 +74,18 @@ void* server_thread(void* arg) {
     betanet_secure_channel_free(srv_chan);
     betanet_ctx_free(srv_ctx);
     printf("[server] Done\n");
+#ifdef _WIN32
+    return 0;
+#else
     return NULL;
+#endif
 }
 
 #ifdef _WIN32
 DWORD WINAPI client_thread(LPVOID arg) {
     Sleep(200);
 #else
-void* client_thread(void* arg) {
+thread_return_t client_thread(void* arg) {
     usleep(200000); // Wait for server to start
 #endif
     printf("[client] Starting client peer...\n");
@@ -148,21 +147,25 @@ void* client_thread(void* arg) {
     betanet_secure_channel_free(cli_chan);
     betanet_ctx_free(cli_ctx);
     printf("[client] Done\n");
+#ifdef _WIN32
+    return 0;
+#else
     return NULL;
+#endif
 }
 
 int main() {
-    pthread_t srv, cli;
+    thread_t srv, cli;
     printf("Betanet CLI demo: local peer-to-peer session\n");
 
     // Initialize library (if needed)
     betanet_init();
 
-    pthread_create(&srv, NULL, server_thread, NULL);
-    pthread_create(&cli, NULL, client_thread, NULL);
+    thread_create(&srv, server_thread, NULL);
+    thread_create(&cli, client_thread, NULL);
 
-    pthread_join(srv, NULL);
-    pthread_join(cli, NULL);
+    thread_join(srv, NULL);
+    thread_join(cli, NULL);
 
     betanet_shutdown();
     printf("Demo complete.\n");

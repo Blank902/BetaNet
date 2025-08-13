@@ -9,10 +9,75 @@ See [`technical-overview.md`](technical-overview.md:33-92) for a detailed archit
 
 ---
 
+## PQ Hybrid Handshake (X25519+Kyber768, Feature-Flagged, Stub)
+
+Betanet includes a **post-quantum (PQ) hybrid handshake** using X25519 and Kyber768, available as a stubbed feature. This handshake is **disabled by default** and can be enabled via the `BETANET_ENABLE_PQ_HYBRID` feature flag at compile time. The hybrid handshake code path is present for compliance and future PQC readiness, but is **not implemented** and will not perform a real Kyber768 exchange.
+
+- **How to enable:**
+  Define `BETANET_ENABLE_PQ_HYBRID` as `1` in your build configuration or uncomment the macro in [`include/betanet/betanet.h`](include/betanet/betanet.h:4-7).
+- **Status:** Stub only; enabling the flag does not provide PQ security.
+- **Rationale:** Deferred due to dependency on external PQ libraries and evolving standards. See [`technical-overview.md`](technical-overview.md:175-180) for details.
+
+
 **Documentation:**
-- [Developer Guide](DEVELOPER_GUIDE.md): Traffic fingerprinting, shaping, and architectural notes
-- [Security Notes](SECURITY_NOTES.md): RNG, replay windows, side-channel mitigations
-- See [`technical-overview.md`](technical-overview.md:127) for deliverable mapping and rationale
+- [Developer Guide](DEVELOPER_GUIDE.md): Implementation details for traffic fingerprinting, shaping, and architectural notes (updated 2025-08-12)
+- [Security Notes](SECURITY_NOTES.md): RNG, replay windows, and side-channel mitigations (updated 2025-08-12)
+- See [`technical-overview.md`](technical-overview.md:127-131) for documentation deliverables and rationale
+
+---
+
+## Quickstart
+
+**Build Requirements:**
+- CMake, clang/gcc
+- OpenSSL/mbedTLS, libsodium
+
+**Build & Run:**
+```sh
+cmake -B build
+cmake --build build
+./build/cli/bnetc-cli/bnetc-cli --help
+```
+For a local handshake/echo demo, see CLI scripts in [`cli/bnetc-cli/`](cli/bnetc-cli/).
+
+---
+
+## Architecture Diagram
+
+```
++----------------------------+
+| CLI Demo App               |
++----------------------------+
+| Public C API               |
++----------------------------+
+| Control Plane Hooks        |
+| (Bootstrap / Routing)      |
++----------------------------+
+| Inner Secure Channel       |
+| (Noise XK, AEAD Framing)   |
++----------------------------+
+| Cover Transport Layer      |
+| (TLS1.3 / HTTP2, QUIC opt) |
++----------------------------+
+| Path Selection / Routing   |
++----------------------------+
+| Access Media (Sockets)     |
++----------------------------+
+```
+See [`technical-overview.md`](technical-overview.md:33-92) for details.
+
+---
+
+## Specification Mapping
+
+| Deliverable         | Location/Section                                      |
+|---------------------|-------------------------------------------------------|
+| Quickstart          | [README.md](README.md:17)                             |
+| Architecture Diagram| [README.md](README.md:---), [technical-overview.md:33-92] |
+| Spec Mapping        | [README.md:391-408], [technical-overview.md:127-131]  |
+| Developer Guide     | [DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md:1-58)         |
+| Security Notes      | [SECURITY_NOTES.md](SECURITY_NOTES.md:1-57)           |
+
 
 ---
 
@@ -376,36 +441,40 @@ Raven Development Team publishes a time-lock hash of the final text.
 ---
 ## Incomplete or Stubbed Features
 
-- QUIC transport support (stubbed, not implemented)
-- PQ hybrid handshake (stubbed, feature flag)
-- Multipath routing (API hooks only)
-- Mixnet integration (stubbed)
-- Adaptive shaping profiles (planned)
-- Distributed replay tracking (planned)
+- **QUIC transport support** (stubbed, not implemented): QUIC integration is deferred due to protocol complexity, fingerprinting challenges, and dependency management. See [technical-overview.md:169-174]. *Mitigation:* Modular transport abstraction and QUIC stubs are maintained for future integration.
+- **PQ hybrid handshake** (stubbed, feature flag): Post-quantum (Kyber768) hybrid handshake is stubbed and only enabled via feature flag. Deferred due to dependency on external PQ libraries and evolving standards. See [technical-overview.md:175-180]. *Mitigation:* Hybrid handshake code paths are tested as stubs; PQC standardization is monitored.
+  - See [PQ Hybrid Handshake section](README.md:11-18) for usage and enabling instructions.
+- **Multipath routing** (API hooks only): Multipath logic is present as API hooks, but only single-path is implemented. Deferred due to path management complexity and lack of real-world multipath scenarios in demo. See [technical-overview.md:181-186]. *Mitigation:* Multipath hooks are retained in API; assumptions are documented.
+- **Mixnet integration** (stubbed): Mixnet support is stubbed in path selection. Deferred due to external dependencies and mixnet routing complexity. See [technical-overview.md:187-191]. *Mitigation:* Mixnet stubs and interfaces are kept for phased integration.
+- **Distributed replay tracking** (planned): Distributed replay tracking is deferred and not yet implemented. See [technical-overview.md:191]. *Mitigation:* Modular design allows for future addition; rationale and risks are documented.
+- **Adaptive shaping profiles**: Implemented. Adaptive HTTP/2/3 shaping, origin-mirrored SETTINGS, PING cadence, and padding logic are now complete and covered by regression tests.
 
 All deferred features are documented in [Developer Guide](DEVELOPER_GUIDE.md) and [Security Notes](SECURITY_NOTES.md).
-See [`technical-overview.md`](technical-overview.md:167-191) for rationale and mitigation.
+See [`technical-overview.md`](technical-overview.md:167-191) for rationale, risks, and mitigation strategies.
 
 ---
 
 ## 11  Compliance Summary
 
+**Implementation status as of 2025-08-12:**
+
 An implementation is **compliant** if it:
 
-1. Implements HTX over TCP-443 **and** QUIC-443 with origin-mirrored TLS + ECH; performs per-connection calibration (§5.1).
-2. Uses **negotiated-carrier, replay-bound** access tickets (§5.2) with variable lengths and rate-limits.
-3. Performs inner Noise *XK* with key separation, nonce lifecycle, and rekeying (§5.3); uses hybrid X25519-Kyber768 from *2027-01-01*.
-4. Emulates HTTP/2/3 with adaptive cadences and origin-mirrored parameters (§5.5).
-5. Bridges non-SCION links by **HTX-tunnelled transition**; no on-wire transition header on public networks (§4.2).
-6. Offers `/betanet/htx/1.1.0` and `/betanet/htxquic/1.1.0` transports (§6.2).
-7. Bootstraps via rotating rendezvous IDs derived from **BeaconSet** with PoW and multi-bucket rate-limits; deterministic seeds not used (§6.3–§6.5).
-8. Selects mixnodes using BeaconSet randomness with per-stream entropy and path diversity (§7.2); “balanced” mode enforces **≥ 2** hops until trust ≥ **0.8** (§7.1–§7.3).
-9. Verifies alias ledger with **finality-bound 2-of-3** and applies **Emergency Advance** liveness only under §8.2 conditions; validates quorum certificates as specified.
-10. Accepts 128-B Cashu vouchers for known keysets with PoW adverts and rate-limits; supports Lightning settlement (§9).
-11. Enforces anti-concentration caps, diversity, and partition checks for governance (§10).
-12. Implements anti-correlation fallback with cover connections on UDP→TCP retries (§5.6).
-13. Builds are reproducible and publish **SLSA 3** provenance artifacts for release binaries.
+1. Implements HTX over TCP-443 (**complete**) and QUIC-443 (**stubbed, not implemented**; see Incomplete Features) with origin-mirrored TLS + ECH; performs per-connection calibration (§5.1).
+2. Uses **negotiated-carrier, replay-bound** access tickets (§5.2) with variable lengths (**implemented**); per-prefix rate-limits and distributed replay tracking (**stubbed/deferred**).
+3. Performs inner Noise *XK* with key separation, nonce lifecycle, and rekeying (§5.3) (**implemented**); hybrid X25519-Kyber768 (**stubbed, feature flag only**; see PQ Hybrid Handshake section).
+4. Emulates HTTP/2/3 with adaptive cadences and origin-mirrored parameters (§5.5) (**implemented**, adaptive shaping, SETTINGS mirroring, PING cadence, and padding are fully covered).
+5. Bridges non-SCION links by **HTX-tunnelled transition**; no on-wire transition header on public networks (§4.2) (**implemented**).
+6. Offers `/betanet/htx/1.1.0` transport (**implemented**); `/betanet/htxquic/1.1.0` (**stubbed**).
+7. Bootstraps via rotating rendezvous IDs derived from **BeaconSet** with PoW and multi-bucket rate-limits; deterministic seeds not used (§6.3–§6.5) (**partially implemented**, PoW and rate-limits stubbed).
+8. Selects mixnodes using BeaconSet randomness with per-stream entropy and path diversity (§7.2); “balanced” mode enforces **≥ 2** hops until trust ≥ **0.8** (§7.1–§7.3) (**stub implementation, not functional**).
+9. Verifies alias ledger with **finality-bound 2-of-3** and applies **Emergency Advance** liveness only under §8.2 conditions; validates quorum certificates as specified (**not fully implemented**).
+10. Accepts 128-B Cashu vouchers for known keysets with PoW adverts and rate-limits; supports Lightning settlement (§9) (**partially implemented**, PoW and rate-limits stubbed).
+11. Enforces anti-concentration caps, diversity, and partition checks for governance (§10) (**stubbed/deferred**).
+12. Implements anti-correlation fallback with cover connections on UDP→TCP retries (§5.6) (**stubbed**).
+13. Builds are reproducible and publish **SLSA 3** provenance artifacts for release binaries (**not implemented**).
 
+**Deferred or stubbed features are documented in the Incomplete or Stubbed Features section above.**
 ---
 
 ## 12  Interoperability Notes (1.0 Compatibility)
@@ -417,3 +486,9 @@ An implementation is **compliant** if it:
 ---
 
 ## 13  End of Betanet Specification 1.1
+
+---
+
+## SLSA Provenance
+
+**Note:** SLSA provenance is **not implemented** in this project.
