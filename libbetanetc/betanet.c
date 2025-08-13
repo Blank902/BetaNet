@@ -1,19 +1,22 @@
 #include "betanet/betanet.h"
-#include "htx/htx.h"
-#include "htx/ticket.h"
+#include "../src/htx/htx.h"
+#include "../src/htx/ticket.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include "../src/noise/noise.h"
 #include "../src/shape/shape.h"
 #include "../src/path/path.h"
+#include "../src/util/platform.h"
 
 void betanet_init(void) {
-    // Placeholder for global init (OpenSSL, etc.)
+    // Initialize platform (Winsock on Windows)
+    betanet_platform_init();
 }
 
 void betanet_shutdown(void) {
-    // Placeholder for global shutdown
+    // Cleanup platform (Winsock on Windows)
+    betanet_platform_cleanup();
 }
 
 // --- Privacy Mode API ---
@@ -31,13 +34,19 @@ betanet_privacy_mode_t betanet_get_privacy_mode(const htx_ctx_t* ctx) {
 // --- Peer Trust Scoring API ---
 int betanet_set_peer_trust(htx_ctx_t* ctx, const betanet_peer_trust_t* trust) {
     if (!ctx || !trust) return -1;
-    ctx->peer_trust = *trust;
+    ctx->peer_trust.uptime_score = trust->uptime_score;
+    ctx->peer_trust.relay_score = trust->relay_score;
+    ctx->peer_trust.staked_ecash = trust->staked_ecash;
+    ctx->peer_trust.trust_score = trust->trust_score;
     return 0;
 }
 
 int betanet_get_peer_trust(const htx_ctx_t* ctx, betanet_peer_trust_t* trust_out) {
     if (!ctx || !trust_out) return -1;
-    *trust_out = ctx->peer_trust;
+    trust_out->uptime_score = ctx->peer_trust.uptime_score;
+    trust_out->relay_score = ctx->peer_trust.relay_score;
+    trust_out->staked_ecash = ctx->peer_trust.staked_ecash;
+    trust_out->trust_score = ctx->peer_trust.trust_score;
     return 0;
 }
 

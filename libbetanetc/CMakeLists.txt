@@ -3,8 +3,10 @@ set(GOV_SRC
     ../src/gov/gov.c
 )
 add_library(betanetc
+    betanet.c
     ../include/betanet/betanet.h
     ../src/htx/htx.c
+    ../src/htx/ticket.c
     ../src/noise/noise.c
     ../src/shape/shape.c
     ../src/path/path.c

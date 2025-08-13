@@ -40,6 +40,14 @@ typedef struct htx_ctx_s {
     uint32_t peer_idle_padding_len;
     // --- Fingerprint tuning profile (JA3/JA4, SETTINGS, extension order) ---
     int fingerprint_profile_id; // Reserved for future use (stub, §5.1, §5.5)
+    // --- Betanet API extensions ---
+    int privacy_mode;      // betanet_privacy_mode_t (but avoid type dependency)
+    struct {
+        float uptime_score;
+        float relay_score;
+        float staked_ecash;
+        float trust_score;
+    } peer_trust;
     union {
         struct {
             int sockfd;

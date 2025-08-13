@@ -288,8 +288,10 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="C:\Users\xxlmn\Documents\BetaNet\libbetanetc\betanet.c" />
     <ClInclude Include="C:\Users\xxlmn\Documents\BetaNet\include\betanet\betanet.h" />
     <ClCompile Include="C:\Users\xxlmn\Documents\BetaNet\src\htx\htx.c" />
+    <ClCompile Include="C:\Users\xxlmn\Documents\BetaNet\src\htx\ticket.c" />
     <ClCompile Include="C:\Users\xxlmn\Documents\BetaNet\src\noise\noise.c" />
     <ClCompile Include="C:\Users\xxlmn\Documents\BetaNet\src\shape\shape.c" />
     <ClCompile Include="C:\Users\xxlmn\Documents\BetaNet\src\path\path.c" />

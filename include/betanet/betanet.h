@@ -17,6 +17,7 @@ extern "C" {
 #include <stdint.h>
 
 #include "../src/shape/shape.h"
+#include "../src/htx/htx.h"
 
 // Forward declarations for HTX and ticket types
 typedef struct htx_ctx_s htx_ctx_t;

@@ -322,7 +322,7 @@ int htx_send_keepalive(htx_ctx_t* ctx) {
     uint32_t interval = shape_next_keepalive(ctx->shape_cfg);
     // For demo: sleep for interval, then send a PING frame (HTTP/2 style)
     // Real implementation should use event/timer
-    usleep(interval * 1000);
+    thread_sleep_ms(interval);
     unsigned char ping_frame[9] = {0x00,0x00,0x08,0x06,0x00,0x00,0x00,0x00,0x00}; // HTTP/2 PING
     if (ctx->transport == HTX_TRANSPORT_TCP && ctx->state.tcp.ssl)
         SSL_write(ctx->state.tcp.ssl, ping_frame, 9);
@@ -338,7 +338,7 @@ int htx_send_idle_padding(htx_ctx_t* ctx) {
     if (!ctx || !ctx->is_connected) return -1;
     uint32_t idle_timeout = shape_next_idle_timeout(ctx->shape_cfg);
     if (idle_timeout == 0) return 0;
-    usleep(idle_timeout * 1000);
+    thread_sleep_ms(idle_timeout);
     uint32_t pad_len = ctx->shape_cfg->idle_padding_max ?
         (rand() % (ctx->shape_cfg->idle_padding_max + 1)) : 0;
     /* Calibrate pad_len based on peer if available */

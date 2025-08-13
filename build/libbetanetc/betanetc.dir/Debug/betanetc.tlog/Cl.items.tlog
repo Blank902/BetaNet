@@ -1,4 +1,6 @@
+C:\Users\xxlmn\Documents\BetaNet\libbetanetc\betanet.c;C:\Users\xxlmn\Documents\BetaNet\build\libbetanetc\betanetc.dir\Debug\betanet.obj
 C:\Users\xxlmn\Documents\BetaNet\src\htx\htx.c;C:\Users\xxlmn\Documents\BetaNet\build\libbetanetc\betanetc.dir\Debug\htx.obj
+C:\Users\xxlmn\Documents\BetaNet\src\htx\ticket.c;C:\Users\xxlmn\Documents\BetaNet\build\libbetanetc\betanetc.dir\Debug\ticket.obj
 C:\Users\xxlmn\Documents\BetaNet\src\noise\noise.c;C:\Users\xxlmn\Documents\BetaNet\build\libbetanetc\betanetc.dir\Debug\noise.obj
 C:\Users\xxlmn\Documents\BetaNet\src\shape\shape.c;C:\Users\xxlmn\Documents\BetaNet\build\libbetanetc\betanetc.dir\Debug\shape.obj
 C:\Users\xxlmn\Documents\BetaNet\src\path\path.c;C:\Users\xxlmn\Documents\BetaNet\build\libbetanetc\betanetc.dir\Debug\path.obj
