@@ -57,6 +57,11 @@ if(NOT CMAKE_INSTALL_LOCAL_ONLY)
   include("C:/Users/xxlmn/Documents/BetaNet/build/tests/integration/cmake_install.cmake")
 endif()
 
+if(NOT CMAKE_INSTALL_LOCAL_ONLY)
+  # Include the install script for the subdirectory.
+  include("C:/Users/xxlmn/Documents/BetaNet/build/tests/performance/cmake_install.cmake")
+endif()
+
 if(CMAKE_INSTALL_COMPONENT)
   if(CMAKE_INSTALL_COMPONENT MATCHES "^[a-zA-Z0-9_.+-]+$")
     set(CMAKE_INSTALL_MANIFEST "install_manifest_${CMAKE_INSTALL_COMPONENT}.txt")

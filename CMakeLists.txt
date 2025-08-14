@@ -77,6 +77,7 @@ enable_testing()
 add_subdirectory(tests/unit)
 add_subdirectory(tests/interop)
 add_subdirectory(tests/integration)
+add_subdirectory(tests/performance)
 
 # --- SLSA Provenance Metadata Generation ---
 # Function to generate provenance metadata for a build artifact.
