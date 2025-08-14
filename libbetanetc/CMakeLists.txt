@@ -12,6 +12,8 @@ add_library(betanetc
     ../include/betanet/htx_calibration.h
     ../include/betanet/path_optimization.h
     ../include/betanet/http2_emulation.h
+    ../include/betanet/pq_hybrid.h
+    ../include/betanet/payment.h
     ../src/htx/htx.c
     ../src/htx/ticket.c
     ../src/htx/htx_tickets.c

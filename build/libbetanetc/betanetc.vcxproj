@@ -94,12 +94,12 @@
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <SupportJustMyCode></SupportJustMyCode>
       <UseFullPaths>false</UseFullPaths>
-      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;CMAKE_INTDIR="Debug"</PreprocessorDefinitions>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;BETANET_VERSION_MAJOR=1;BETANET_VERSION_MINOR=1;BETANET_SPEC_COMPLIANCE=1;CMAKE_INTDIR="Debug"</PreprocessorDefinitions>
       <ObjectFileName>$(IntDir)</ObjectFileName>
       <ScanSourceForModuleDependencies>false</ScanSourceForModuleDependencies>
     </ClCompile>
     <ResourceCompile>
-      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_DEBUG;_WINDOWS;CMAKE_INTDIR=\"Debug\"</PreprocessorDefinitions>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_DEBUG;_WINDOWS;BETANET_VERSION_MAJOR=1;BETANET_VERSION_MINOR=1;BETANET_SPEC_COMPLIANCE=1;CMAKE_INTDIR=\"Debug\"</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>C:\Users\xxlmn\Documents\BetaNet\libbetanetc\..\include;C:\Program Files\OpenSSL-Win64\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
     <Midl>
@@ -131,14 +131,14 @@
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <SupportJustMyCode></SupportJustMyCode>
       <UseFullPaths>false</UseFullPaths>
-      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;CMAKE_INTDIR="Release"</PreprocessorDefinitions>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;BETANET_VERSION_MAJOR=1;BETANET_VERSION_MINOR=1;BETANET_SPEC_COMPLIANCE=1;CMAKE_INTDIR="Release"</PreprocessorDefinitions>
       <ObjectFileName>$(IntDir)</ObjectFileName>
       <DebugInformationFormat>
       </DebugInformationFormat>
       <ScanSourceForModuleDependencies>false</ScanSourceForModuleDependencies>
     </ClCompile>
     <ResourceCompile>
-      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;CMAKE_INTDIR=\"Release\"</PreprocessorDefinitions>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;BETANET_VERSION_MAJOR=1;BETANET_VERSION_MINOR=1;BETANET_SPEC_COMPLIANCE=1;CMAKE_INTDIR=\"Release\"</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>C:\Users\xxlmn\Documents\BetaNet\libbetanetc\..\include;C:\Program Files\OpenSSL-Win64\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
     <Midl>
@@ -170,14 +170,14 @@
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <SupportJustMyCode></SupportJustMyCode>
       <UseFullPaths>false</UseFullPaths>
-      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;CMAKE_INTDIR="MinSizeRel"</PreprocessorDefinitions>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;BETANET_VERSION_MAJOR=1;BETANET_VERSION_MINOR=1;BETANET_SPEC_COMPLIANCE=1;CMAKE_INTDIR="MinSizeRel"</PreprocessorDefinitions>
       <ObjectFileName>$(IntDir)</ObjectFileName>
       <DebugInformationFormat>
       </DebugInformationFormat>
       <ScanSourceForModuleDependencies>false</ScanSourceForModuleDependencies>
     </ClCompile>
     <ResourceCompile>
-      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;CMAKE_INTDIR=\"MinSizeRel\"</PreprocessorDefinitions>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;BETANET_VERSION_MAJOR=1;BETANET_VERSION_MINOR=1;BETANET_SPEC_COMPLIANCE=1;CMAKE_INTDIR=\"MinSizeRel\"</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>C:\Users\xxlmn\Documents\BetaNet\libbetanetc\..\include;C:\Program Files\OpenSSL-Win64\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
     <Midl>
@@ -210,12 +210,12 @@
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <SupportJustMyCode></SupportJustMyCode>
       <UseFullPaths>false</UseFullPaths>
-      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;CMAKE_INTDIR="RelWithDebInfo"</PreprocessorDefinitions>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;BETANET_VERSION_MAJOR=1;BETANET_VERSION_MINOR=1;BETANET_SPEC_COMPLIANCE=1;CMAKE_INTDIR="RelWithDebInfo"</PreprocessorDefinitions>
       <ObjectFileName>$(IntDir)</ObjectFileName>
       <ScanSourceForModuleDependencies>false</ScanSourceForModuleDependencies>
     </ClCompile>
     <ResourceCompile>
-      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;CMAKE_INTDIR=\"RelWithDebInfo\"</PreprocessorDefinitions>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;BETANET_VERSION_MAJOR=1;BETANET_VERSION_MINOR=1;BETANET_SPEC_COMPLIANCE=1;CMAKE_INTDIR=\"RelWithDebInfo\"</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>C:\Users\xxlmn\Documents\BetaNet\libbetanetc\..\include;C:\Program Files\OpenSSL-Win64\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
     <Midl>
@@ -296,12 +296,16 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     <ClInclude Include="C:\Users\xxlmn\Documents\BetaNet\include\betanet\htx_transport.h" />
     <ClInclude Include="C:\Users\xxlmn\Documents\BetaNet\include\betanet\htx_calibration.h" />
     <ClInclude Include="C:\Users\xxlmn\Documents\BetaNet\include\betanet\path_optimization.h" />
+    <ClInclude Include="C:\Users\xxlmn\Documents\BetaNet\include\betanet\http2_emulation.h" />
+    <ClInclude Include="C:\Users\xxlmn\Documents\BetaNet\include\betanet\pq_hybrid.h" />
+    <ClInclude Include="C:\Users\xxlmn\Documents\BetaNet\include\betanet\payment.h" />
     <ClCompile Include="C:\Users\xxlmn\Documents\BetaNet\src\htx\htx.c" />
     <ClCompile Include="C:\Users\xxlmn\Documents\BetaNet\src\htx\ticket.c" />
     <ClCompile Include="C:\Users\xxlmn\Documents\BetaNet\src\htx\htx_tickets.c" />
     <ClCompile Include="C:\Users\xxlmn\Documents\BetaNet\src\htx\htx_frames.c" />
     <ClCompile Include="C:\Users\xxlmn\Documents\BetaNet\src\htx\htx_noise_integration.c" />
     <ClCompile Include="C:\Users\xxlmn\Documents\BetaNet\src\htx\htx_transport.c" />
+    <ClCompile Include="C:\Users\xxlmn\Documents\BetaNet\src\htx\http2_emulation.c" />
     <ClCompile Include="C:\Users\xxlmn\Documents\BetaNet\src\htx\origin_calibration.c" />
     <ClCompile Include="C:\Users\xxlmn\Documents\BetaNet\src\noise\noise.c" />
     <ClCompile Include="C:\Users\xxlmn\Documents\BetaNet\src\shape\shape.c" />
@@ -318,6 +322,7 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
       <ObjectFileName>$(IntDir)/__/src/util/scion.c.obj</ObjectFileName>
     </ClCompile>
     <ClCompile Include="C:\Users\xxlmn\Documents\BetaNet\src\util\secure_utils.c" />
+    <ClCompile Include="C:\Users\xxlmn\Documents\BetaNet\src\util\secure_log.c" />
     <ClCompile Include="C:\Users\xxlmn\Documents\BetaNet\src\pay\pay.c" />
   </ItemGroup>
   <ItemGroup>

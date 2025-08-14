@@ -422,6 +422,61 @@ void scion_reset_metrics(scion_selector_t* selector);
 void scion_selector_cleanup(scion_selector_t* selector);
 
 // ==============================================================================
+// BetaNet v1.1 Enhanced Path Discovery
+// ==============================================================================
+
+/**
+ * Enhanced path discovery for censorship resistance
+ * Implements path diversity and AS-avoidance for BetaNet v1.1
+ */
+typedef struct {
+    scion_ia_t avoided_as_list[16];    // ASes to avoid for censorship resistance
+    uint8_t num_avoided_as;
+    uint8_t enable_path_diversity;      // Use multiple disjoint paths
+    uint8_t prefer_long_paths;          // Prefer longer paths for anonymity
+    uint32_t max_path_length;           // Maximum acceptable path length
+    uint32_t discovery_timeout_ms;      // Path discovery timeout
+} betanet_scion_discovery_config_t;
+
+/**
+ * Discover censorship-resistant paths
+ * 
+ * @param src_ia Source ISD-AS
+ * @param dst_ia Destination ISD-AS
+ * @param config Discovery configuration
+ * @param paths Output path array
+ * @param max_paths Maximum number of paths
+ * @param num_found Number of paths discovered
+ * @return 0 on success, negative on error
+ */
+int betanet_scion_discover_diverse_paths(const scion_ia_t* src_ia,
+                                         const scion_ia_t* dst_ia,
+                                         const betanet_scion_discovery_config_t* config,
+                                         scion_path_t* paths,
+                                         size_t max_paths,
+                                         size_t* num_found);
+
+/**
+ * Validate path does not traverse censored ASes
+ * 
+ * @param path Path to validate
+ * @param config Discovery configuration with avoided ASes
+ * @return 1 if path is safe, 0 if traverses censored AS
+ */
+int betanet_scion_validate_censorship_resistance(const scion_path_t* path,
+                                                 const betanet_scion_discovery_config_t* config);
+
+/**
+ * Get AS-level path diversity score
+ * 
+ * @param paths Array of paths
+ * @param num_paths Number of paths
+ * @return Diversity score (0-100, higher is more diverse)
+ */
+uint8_t betanet_scion_calculate_path_diversity(const scion_path_t* paths,
+                                               size_t num_paths);
+
+// ==============================================================================
 // Default Configuration Values
 // ==============================================================================
 

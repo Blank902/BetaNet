@@ -70,6 +70,18 @@ endif()
 
 set(CMAKE_C_STANDARD 11)
 
+# BetaNet v1.1 specification compliance
+add_definitions(-DBETANET_VERSION_MAJOR=1)
+add_definitions(-DBETANET_VERSION_MINOR=1)
+add_definitions(-DBETANET_SPEC_COMPLIANCE=1)
+
+# Post-quantum cryptography (optional for now, mandatory 2027-01-01)
+option(BETANET_ENABLE_PQ_HYBRID "Enable post-quantum hybrid cryptography" OFF)
+if(BETANET_ENABLE_PQ_HYBRID)
+    add_definitions(-DBETANET_ENABLE_PQ_HYBRID)
+    # TODO: Add liboqs dependency when available
+endif()
+
 add_subdirectory(libbetanetc)
 add_subdirectory(cli/bnetc-cli)
 

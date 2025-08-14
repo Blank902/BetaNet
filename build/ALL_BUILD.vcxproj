@@ -193,9 +193,17 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
       <Project>{9EBFFB89-FF3B-3E49-9511-AE1E34785A5D}</Project>
       <Name>gov_protocol</Name>
     </ProjectReference>
+    <ProjectReference Include="C:\Users\xxlmn\Documents\BetaNet\build\tests\unit\http2_emulation_test.vcxproj">
+      <Project>{15CC8BA0-2BA2-3B1E-9589-8508336E42EA}</Project>
+      <Name>http2_emulation_test</Name>
+    </ProjectReference>
     <ProjectReference Include="C:\Users\xxlmn\Documents\BetaNet\build\tests\integration\htx_frames_test.vcxproj">
       <Project>{EA490CD0-F6B0-3AB2-AF32-F4116FB66317}</Project>
       <Name>htx_frames_test</Name>
+    </ProjectReference>
+    <ProjectReference Include="C:\Users\xxlmn\Documents\BetaNet\build\tests\integration\htx_http2_integration_test.vcxproj">
+      <Project>{0D07F44B-D4EC-37E6-9EB3-0E6F08BB6A3D}</Project>
+      <Name>htx_http2_integration_test</Name>
     </ProjectReference>
     <ProjectReference Include="C:\Users\xxlmn\Documents\BetaNet\build\tests\integration\htx_noise_integration_test.vcxproj">
       <Project>{0736F53F-5CEA-38FC-AAF6-0DB1F00505B5}</Project>

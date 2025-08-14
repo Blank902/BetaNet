@@ -18,6 +18,7 @@ C:/Users/xxlmn/Documents/BetaNet/build/tests/unit/CMakeFiles/test_htx_calibratio
 C:/Users/xxlmn/Documents/BetaNet/build/tests/unit/CMakeFiles/test_minimal.dir
 C:/Users/xxlmn/Documents/BetaNet/build/tests/unit/CMakeFiles/test_htx_calibration_mock.dir
 C:/Users/xxlmn/Documents/BetaNet/build/tests/unit/CMakeFiles/test_path_optimization.dir
+C:/Users/xxlmn/Documents/BetaNet/build/tests/unit/CMakeFiles/http2_emulation_test.dir
 C:/Users/xxlmn/Documents/BetaNet/build/tests/unit/CMakeFiles/RUN_TESTS.dir
 C:/Users/xxlmn/Documents/BetaNet/build/tests/interop/CMakeFiles/interop_protocol_test.dir
 C:/Users/xxlmn/Documents/BetaNet/build/tests/interop/CMakeFiles/RUN_TESTS.dir
@@ -30,6 +31,7 @@ C:/Users/xxlmn/Documents/BetaNet/build/tests/integration/CMakeFiles/htx_tickets_
 C:/Users/xxlmn/Documents/BetaNet/build/tests/integration/CMakeFiles/htx_frames_test.dir
 C:/Users/xxlmn/Documents/BetaNet/build/tests/integration/CMakeFiles/htx_noise_integration_test.dir
 C:/Users/xxlmn/Documents/BetaNet/build/tests/integration/CMakeFiles/integration_path_htx.dir
+C:/Users/xxlmn/Documents/BetaNet/build/tests/integration/CMakeFiles/htx_http2_integration_test.dir
 C:/Users/xxlmn/Documents/BetaNet/build/tests/integration/CMakeFiles/RUN_TESTS.dir
 C:/Users/xxlmn/Documents/BetaNet/build/tests/performance/CMakeFiles/htx_noise_performance_test.dir
 C:/Users/xxlmn/Documents/BetaNet/build/tests/performance/CMakeFiles/RUN_TESTS.dir
