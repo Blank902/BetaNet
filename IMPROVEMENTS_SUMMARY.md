@@ -2,7 +2,53 @@
 
 This document summarizes the comprehensive improvements made to the BetaNet C Library project to enhance documentation, code maintainability, and overall GitHub repository organization.
 
-## 🎯 Overview of Improvements
+## 🚨 Recent Critical Updates (August 2025)
+
+### Codacy Integration and Security Analysis
+
+**Date**: August 14, 2025
+
+**Major Changes**:
+1. **Replaced Codecov with Codacy**: Integrated comprehensive code quality and security analysis
+2. **Added Codacy Badges**: Quality grade (B - 74/100) and coverage badges in README
+3. **Updated CI Pipeline**: Configured Codacy coverage reporter in GitHub Actions workflow
+4. **Critical Security Assessment**: Identified **253 critical security vulnerabilities**
+5. **Documentation**: Created detailed integration guides and security improvement roadmap
+
+**🔴 Critical Security Findings**:
+- **253 Critical Security Issues** requiring immediate attention:
+  - Buffer overflow vulnerabilities (CWE-120): ~150 instances
+  - Input validation failures (CWE-126): ~80 instances  
+  - Unsafe string operations: strcpy, memcpy family functions
+  - Microsoft-banned function usage
+- **Code Quality Metrics**:
+  - Overall Grade: **B (74/100)** - needs improvement to reach A grade
+  - Issue Percentage: **46%** (target: ≤20%)
+  - Code Duplication: **12%** (target: ≤10%)
+  - Complex Files: **23%** (target: ≤10%)
+
+**📋 Next Priority Actions**:
+1. **URGENT**: Address 253 critical security vulnerabilities in C code
+2. **Replace unsafe functions**: Implement secure alternatives for strcpy, memcpy operations
+3. **Input validation**: Add comprehensive bounds checking throughout codebase
+4. **CI Enhancement**: Configure CODACY_PROJECT_TOKEN for automated coverage reporting
+
+**📚 New Documentation**:
+- `docs/CODACY_INTEGRATION.md`: Complete setup and usage guide for Codacy platform
+- `docs/SECURITY_ROADMAP.md`: Structured 8-week security improvement plan with specific milestones
+- Enhanced README with dedicated Code Quality section and real-time metrics
+
+**🎯 Security Improvement Goals**:
+- Target Grade: **A (≥90/100)**
+- Reduce total issues from **339 to <100**
+- Eliminate all **253 critical security vulnerabilities**
+- Achieve **<5% security issue percentage**
+
+This integration establishes continuous security monitoring and provides a clear path toward production-grade security standards for the BetaNet C Library.
+
+---
+
+## 🎯 Previous Comprehensive Improvements Overview
 
 The following improvements have been implemented to transform the BetaNet project into a professional, well-documented, and maintainable open-source library:
 
