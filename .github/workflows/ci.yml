@@ -222,12 +222,11 @@ jobs:
           lcov --remove coverage.info '/usr/*' --output-file coverage.info
           lcov --list coverage.info
       
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v3
+      - name: Upload coverage to Codacy
+        uses: codacy/codacy-coverage-reporter-action@v1
         with:
-          file: ./coverage.info
-          flags: unittests
-          name: codecov-umbrella
+          project-token: ${{ secrets.CODACY_PROJECT_TOKEN }}
+          coverage-reports: coverage.info
 
   # Cross-platform compatibility
   cross-compile:

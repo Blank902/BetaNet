@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Comprehensive GitHub issue and pull request templates
 - Improved CI/CD pipeline with multi-platform testing
-- Code coverage reporting with Codecov integration
+- Code coverage reporting with Codacy integration
 - Static analysis with clang-tidy and cppcheck
 - Cross-compilation support for ARM64 and ARMhf
 - Doxygen configuration for API documentation generation

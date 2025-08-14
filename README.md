@@ -1,6 +1,8 @@
 # BetaNet C Library
 
 [![CI Status](https://github.com/Blank902/BetaNet/workflows/Betanet%20C%20Library%20CI/badge.svg)](https://github.com/Blank902/BetaNet/actions)
+[![Codacy Badge](https://app.codacy.com/project/badge/Grade/1af29499c2b94e41899ea67601b8eb6b)](https://app.codacy.com/gh/Blank902/BetaNet/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_grade)
+[![Codacy Coverage](https://app.codacy.com/project/badge/Coverage/1af29499c2b94e41899ea67601b8eb6b)](https://app.codacy.com/gh/Blank902/BetaNet/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_coverage)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Documentation](https://img.shields.io/badge/docs-doxygen-brightgreen.svg)](docs/html/index.html)
 [![Security](https://img.shields.io/badge/security-analysis-red.svg)](SECURITY_NOTES.md)
@@ -235,8 +237,8 @@ The project includes comprehensive CI testing:
 - **Multi-platform builds**: Linux, macOS, Windows
 - **Compiler testing**: GCC, Clang, MSVC
 - **Security analysis**: AddressSanitizer, UndefinedBehaviorSanitizer
-- **Static analysis**: clang-tidy, cppcheck
-- **Code coverage**: Detailed coverage reporting
+- **Static analysis**: Clang-tidy, cppcheck
+- **Code coverage**: Detailed coverage reporting with Codacy integration
 - **Fuzzing**: Automated fuzz testing of parsers
 
 ## Contributing
@@ -257,6 +259,28 @@ We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for:
 - [ ] Update documentation as needed
 - [ ] Ensure all CI checks pass
 - [ ] Consider security implications
+
+## Code Quality
+
+This project maintains high code quality standards through continuous analysis:
+
+[![Codacy Badge](https://app.codacy.com/project/badge/Grade/1af29499c2b94e41899ea67601b8eb6b)](https://app.codacy.com/gh/Blank902/BetaNet/dashboard)
+
+### Quality Metrics
+
+- **Grade**: B (74/100) - Code quality assessment
+- **Issues**: 339 issues identified across 9,860 lines of code
+- **Coverage**: Comprehensive test coverage tracking
+- **Complexity**: Monitoring complex files and duplication
+
+### Automated Analysis
+
+- **Static Analysis**: Automated code review for security and maintainability
+- **Security Scanning**: Vulnerability detection and remediation
+- **Dependency Monitoring**: Third-party library security tracking
+- **Performance Metrics**: Code complexity and optimization opportunities
+
+Visit the [Codacy Dashboard](https://app.codacy.com/gh/Blank902/BetaNet/dashboard) for detailed analysis.
 
 ## Security
 

@@ -177,7 +177,7 @@ The following improvements have been implemented to transform the BetaNet projec
 4. **Add Topics**: Add relevant GitHub topics for discoverability
 
 ### Future Enhancements
-1. **Codecov Integration**: Set up code coverage reporting
+1. **Codacy Integration**: Set up code coverage reporting
 2. **Dependency Scanning**: Add automated dependency vulnerability scanning
 3. **Performance Benchmarking**: Automated performance regression detection
 4. **Mobile Platform CI**: Add iOS and Android cross-compilation
