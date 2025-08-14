@@ -297,6 +297,7 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     <ClCompile Include="C:\Users\xxlmn\Documents\BetaNet\src\path\path.c" />
     <ClCompile Include="C:\Users\xxlmn\Documents\BetaNet\src\boot\boot.c" />
     <ClCompile Include="C:\Users\xxlmn\Documents\BetaNet\src\util\util.c" />
+    <ClCompile Include="C:\Users\xxlmn\Documents\BetaNet\src\util\cert_utils.c" />
     <ClCompile Include="C:\Users\xxlmn\Documents\BetaNet\src\pay\pay.c" />
   </ItemGroup>
   <ItemGroup>

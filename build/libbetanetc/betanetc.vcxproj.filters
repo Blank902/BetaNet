@@ -25,6 +25,9 @@
     <ClCompile Include="C:\Users\xxlmn\Documents\BetaNet\src\util\util.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="C:\Users\xxlmn\Documents\BetaNet\src\util\cert_utils.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="C:\Users\xxlmn\Documents\BetaNet\src\pay\pay.c">
       <Filter>Source Files</Filter>
     </ClCompile>

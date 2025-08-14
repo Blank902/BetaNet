@@ -6,4 +6,5 @@ C:\Users\xxlmn\Documents\BetaNet\src\shape\shape.c;C:\Users\xxlmn\Documents\Beta
 C:\Users\xxlmn\Documents\BetaNet\src\path\path.c;C:\Users\xxlmn\Documents\BetaNet\build\libbetanetc\betanetc.dir\Debug\path.obj
 C:\Users\xxlmn\Documents\BetaNet\src\boot\boot.c;C:\Users\xxlmn\Documents\BetaNet\build\libbetanetc\betanetc.dir\Debug\boot.obj
 C:\Users\xxlmn\Documents\BetaNet\src\util\util.c;C:\Users\xxlmn\Documents\BetaNet\build\libbetanetc\betanetc.dir\Debug\util.obj
+C:\Users\xxlmn\Documents\BetaNet\src\util\cert_utils.c;C:\Users\xxlmn\Documents\BetaNet\build\libbetanetc\betanetc.dir\Debug\cert_utils.obj
 C:\Users\xxlmn\Documents\BetaNet\src\pay\pay.c;C:\Users\xxlmn\Documents\BetaNet\build\libbetanetc\betanetc.dir\Debug\pay.obj

@@ -13,6 +13,7 @@
 #include <time.h>
 #include <stdint.h>
 #include "../util/platform.h"
+#include "../util/cert_utils.h"
 #include "../shape/shape.h"
 #include "../path/path.h"
 
@@ -565,13 +566,76 @@ int htx_accept(htx_ctx_t* ctx, htx_ctx_t** client_ctx) {
 int htx_tls_accept(htx_ctx_t* ctx, const char* cert_file, const char* key_file) {
     if (!ctx || !cert_file || !key_file) return -1;
     
-    // For now, stub this function since we don't have certificates
-    // In a real implementation, this would:
-    // 1. Create SSL_CTX with TLS_server_method()
-    // 2. Load certificate and private key
-    // 3. Set up SSL object and perform handshake
-    // 4. Handle ALPN negotiation
+    // Initialize OpenSSL
+    SSL_load_error_strings();
+    OpenSSL_add_ssl_algorithms();
     
-    printf("[htx] TLS server handshake stubbed (cert: %s, key: %s)\n", cert_file, key_file);
-    return -1; // Not implemented yet
+    // Create SSL context for server
+    ctx->state.tcp.ssl_ctx = SSL_CTX_new(TLS_server_method());
+    if (!ctx->state.tcp.ssl_ctx) return -1;
+    
+    // Load certificate file
+    if (SSL_CTX_use_certificate_file(ctx->state.tcp.ssl_ctx, cert_file, SSL_FILETYPE_PEM) <= 0) {
+        printf("[htx] Failed to load certificate file: %s\n", cert_file);
+        SSL_CTX_free(ctx->state.tcp.ssl_ctx);
+        ctx->state.tcp.ssl_ctx = NULL;
+        return -1;
+    }
+    
+    // Load private key file
+    if (SSL_CTX_use_PrivateKey_file(ctx->state.tcp.ssl_ctx, key_file, SSL_FILETYPE_PEM) <= 0) {
+        printf("[htx] Failed to load private key file: %s\n", key_file);
+        SSL_CTX_free(ctx->state.tcp.ssl_ctx);
+        ctx->state.tcp.ssl_ctx = NULL;
+        return -1;
+    }
+    
+    // Verify that the private key matches the certificate
+    if (!SSL_CTX_check_private_key(ctx->state.tcp.ssl_ctx)) {
+        printf("[htx] Private key does not match certificate\n");
+        SSL_CTX_free(ctx->state.tcp.ssl_ctx);
+        ctx->state.tcp.ssl_ctx = NULL;
+        return -1;
+    }
+    
+    // Set ALPN protocols (support h2 for HTTP/2)
+    const unsigned char alpn_list[] = "\x02h2";
+    SSL_CTX_set_alpn_protos(ctx->state.tcp.ssl_ctx, alpn_list, sizeof(alpn_list) - 1);
+    
+    // Create SSL object
+    ctx->state.tcp.ssl = SSL_new(ctx->state.tcp.ssl_ctx);
+    if (!ctx->state.tcp.ssl) {
+        SSL_CTX_free(ctx->state.tcp.ssl_ctx);
+        ctx->state.tcp.ssl_ctx = NULL;
+        return -1;
+    }
+    
+    // Associate the socket with the SSL object
+    SSL_set_fd(ctx->state.tcp.ssl, ctx->state.tcp.sockfd);
+    
+    // Perform TLS handshake
+    int accept_result = SSL_accept(ctx->state.tcp.ssl);
+    if (accept_result != 1) {
+        int ssl_error = SSL_get_error(ctx->state.tcp.ssl, accept_result);
+        printf("[htx] TLS handshake failed: %d (SSL error: %d)\n", accept_result, ssl_error);
+        SSL_free(ctx->state.tcp.ssl);
+        SSL_CTX_free(ctx->state.tcp.ssl_ctx);
+        ctx->state.tcp.ssl = NULL;
+        ctx->state.tcp.ssl_ctx = NULL;
+        return -1;
+    }
+    
+    // Get negotiated ALPN protocol
+    const unsigned char* alpn_out = NULL;
+    unsigned int alpn_outlen = 0;
+    SSL_get0_alpn_selected(ctx->state.tcp.ssl, &alpn_out, &alpn_outlen);
+    if (alpn_out && alpn_outlen > 0) {
+        size_t len = alpn_outlen < sizeof(ctx->alpn_selected) - 1 ? alpn_outlen : sizeof(ctx->alpn_selected) - 1;
+        memcpy(ctx->alpn_selected, alpn_out, len);
+        ctx->alpn_selected[len] = '\0';
+        printf("[htx] ALPN selected: %s\n", ctx->alpn_selected);
+    }
+    
+    printf("[htx] TLS server handshake completed successfully\n");
+    return 0;
 }

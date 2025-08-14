@@ -201,6 +201,10 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
       <Project>{E1504B1E-4E22-37B7-BF3E-958C2CEF153A}</Project>
       <Name>ticket_parser_fuzz</Name>
     </ProjectReference>
+    <ProjectReference Include="C:\Users\xxlmn\Documents\BetaNet\build\tests\integration\tls_server_demo.vcxproj">
+      <Project>{22E2F018-B1B3-39E8-A488-628AEC1F1301}</Project>
+      <Name>tls_server_demo</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

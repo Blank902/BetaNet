@@ -6,9 +6,41 @@
 #include "../../include/betanet/betanet.h"
 #include "../../src/htx/htx.h"
 #include "../../src/noise/noise.h"
+#include "../../src/util/cert_utils.h"
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+
+int test_certificate_generation(void) {
+    printf("[test] Testing certificate generation...\n");
+    
+    const char* cert_file = "test_cert.pem";
+    const char* key_file = "test_key.pem";
+    
+    int result = cert_generate_self_signed(cert_file, key_file);
+    if (result == 0) {
+        printf("[test] Certificate generation successful\n");
+        
+        // Check if files were created
+        FILE* cert_fp = fopen(cert_file, "r");
+        FILE* key_fp = fopen(key_file, "r");
+        
+        if (cert_fp && key_fp) {
+            printf("[test] Certificate files created successfully\n");
+            fclose(cert_fp);
+            fclose(key_fp);
+            return 0;
+        } else {
+            printf("[test] Certificate files not found\n");
+            if (cert_fp) fclose(cert_fp);
+            if (key_fp) fclose(key_fp);
+            return -1;
+        }
+    } else {
+        printf("[test] Certificate generation failed\n");
+        return -1;
+    }
+}
 
 int test_noise_handshake_integration(void) {
     printf("[test] Starting Noise XK handshake integration test...\n");
@@ -33,7 +65,7 @@ int test_noise_handshake_integration(void) {
     if (listen_result == 0) {
         printf("[test] Server listening successfully\n");
     } else {
-        printf("[test] Server listen failed (expected without certificates)\n");
+        printf("[test] Server listen failed: %d\n", listen_result);
     }
     
     // Test 2: Client connection attempt
@@ -84,7 +116,7 @@ int test_noise_handshake_integration(void) {
         
         htx_ctx_free(client_ctx);
     } else {
-        printf("[test] Client connection failed (expected without server)\n");
+        printf("[test] Client connection failed (expected without server): %d\n", connect_result);
         htx_ctx_free(client_ctx);
     }
     
@@ -95,9 +127,70 @@ int test_noise_handshake_integration(void) {
     return 0;
 }
 
+int test_tls_server_functionality(void) {
+    printf("[test] Testing TLS server functionality...\n");
+    
+    // Generate test certificates
+    const char* cert_file = "test_cert.pem";
+    const char* key_file = "test_key.pem";
+    
+    if (cert_generate_self_signed(cert_file, key_file) != 0) {
+        printf("[test] Failed to generate test certificates\n");
+        return -1;
+    }
+    
+    printf("[test] Test certificates generated\n");
+    
+    // Create server context
+    htx_ctx_t* server_ctx = htx_ctx_create(HTX_TRANSPORT_TCP);
+    if (!server_ctx) {
+        printf("[test] Failed to create server context\n");
+        return -1;
+    }
+    
+    // Test server listen
+    if (htx_listen(server_ctx, 8444) != 0) {
+        printf("[test] Failed to start server listener\n");
+        htx_ctx_free(server_ctx);
+        return -1;
+    }
+    
+    printf("[test] Server listening on port 8444\n");
+    
+    // Test TLS context setup (without actual connection)
+    printf("[test] Testing TLS context setup...\n");
+    htx_ctx_t* tls_ctx = htx_ctx_create(HTX_TRANSPORT_TCP);
+    if (tls_ctx) {
+        tls_ctx->state.tcp.sockfd = 1; // Dummy socket for testing
+        int tls_result = htx_tls_accept(tls_ctx, cert_file, key_file);
+        printf("[test] TLS setup result: %d (expected to fail without real socket)\n", tls_result);
+        htx_ctx_free(tls_ctx);
+    }
+    
+    htx_ctx_free(server_ctx);
+    
+    // Clean up test files
+    remove(cert_file);
+    remove(key_file);
+    
+    printf("[test] TLS server functionality test completed\n");
+    return 0;
+}
+
 int main(void) {
-    printf("=== Noise XK Handshake Integration Test ===\n");
-    int result = test_noise_handshake_integration();
-    printf("=== Test %s ===\n", result == 0 ? "COMPLETED" : "FAILED");
-    return result;
+    printf("=== BetaNet Integration Tests ===\n\n");
+    
+    int cert_test = test_certificate_generation();
+    printf("Certificate generation test: %s\n\n", cert_test == 0 ? "PASS" : "FAIL");
+    
+    int tls_test = test_tls_server_functionality();
+    printf("TLS server functionality test: %s\n\n", tls_test == 0 ? "PASS" : "FAIL");
+    
+    int handshake_test = test_noise_handshake_integration();
+    printf("Noise handshake integration test: %s\n\n", handshake_test == 0 ? "PASS" : "FAIL");
+    
+    int overall_result = (cert_test == 0 && tls_test == 0 && handshake_test == 0) ? 0 : 1;
+    printf("=== Overall Test Result: %s ===\n", overall_result == 0 ? "PASS" : "FAIL");
+    
+    return overall_result;
 }

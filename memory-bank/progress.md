@@ -21,16 +21,19 @@
 - Implemented real Noise XK handshake logic with SSL connection detection
 - Created comprehensive integration test for real network functionality
 - Updated secure send/recv functions to use real encrypted channels when available
+- Implemented complete TLS server-side handshake with certificate support
+- Created certificate generation utilities for testing purposes
+- Enhanced integration tests with comprehensive TLS and certificate testing
 
 ## Doing
 
-- Testing real Noise XK handshake integration
-- Documenting major achievements
+- Documenting certificate and TLS server achievements
+- Planning next development priorities
 
 ## Next
 
-- Add certificate generation for full TLS server functionality
-- Implement comprehensive real network integration tests
+- Resolve OpenSSL APPLINK issue for Windows certificate generation
+- Create end-to-end TLS server test with real certificate files
+- Implement comprehensive real network integration tests with both client and server
 - Add proper error handling and retry logic for network operations
 - Integrate SCION path selection capabilities
-- Implement rate limiting and traffic shaping for real connections

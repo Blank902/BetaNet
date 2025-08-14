@@ -12,6 +12,7 @@ add_library(betanetc
     ../src/path/path.c
     ../src/boot/boot.c
     ../src/util/util.c
+    ../src/util/cert_utils.c
     ../src/pay/pay.c
 )
 
