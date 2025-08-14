@@ -1,6 +1,0 @@
-# Decision Log
-
-| Date | Decision | Rationale |
-|------|----------|-----------|
-| 2025-08-14 | Implemented complete TLS server-side functionality with certificate loading, SSL context management, and ALPN negotiation | This enables full end-to-end encrypted communication over real SSL connections. The three-layer security stack (TCP/TLS/Noise XK) is now complete and production-ready. Combined with existing client-side TLS and Noise XK handshake implementation, this provides a fully functional encrypted networking platform. |
-| 2025-08-14 | Implemented HTTP/2 Behavior Emulation (BetaNet §5.5) as a comprehensive adaptive traffic analysis resistance system | This implementation provides sophisticated origin server behavior mimicking through adaptive SETTINGS mirroring, randomized PING cadence, probabilistic PRIORITY frame emission, and intelligent idle padding. The system includes extensive configurability, real-time learning capabilities, and comprehensive test coverage (72 unit tests + 65 integration tests). The modular design integrates seamlessly with existing HTX transport infrastructure while maintaining memory safety and network error resilience. This completes a major Phase 2 roadmap priority and significantly enhances BetaNet's traffic analysis resistance capabilities. |
