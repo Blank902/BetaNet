@@ -9,7 +9,16 @@
 #include "betanet/betanet.h"
 
 int main(void) {
+    // Initialize BetaNet library first
+    betanet_init();
+    
     htx_ctx_t *ctx = betanet_ctx_create();
+    if (!ctx) {
+        printf("[FAIL] Failed to create context\n");
+        betanet_shutdown();
+        return 1;
+    }
+    
     // Set a known shaping/fingerprinting profile (e.g., CDN baseline)
     // shape_profile_t profile = SHAPE_PROFILE_CDN; // Example, adjust as needed
     // betanet_set_shaping_profile(ctx, profile);
@@ -24,9 +33,12 @@ int main(void) {
     // const char *expected_fp = "REF_FINGERPRINT";
     // if (strcmp(actual_fp, expected_fp) != 0) {
     //     printf("[FAIL] Fingerprint drift detected\n");
+    //     betanet_ctx_free(ctx);
+    //     betanet_shutdown();
     //     return 1;
     // }
     printf("[PASS] Fingerprint regression (stub)\n");
     betanet_ctx_free(ctx);
+    betanet_shutdown();
     return 0;
 }

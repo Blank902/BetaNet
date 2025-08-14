@@ -22,21 +22,33 @@ int htx_ticket_parse(const char* input, htx_ticket_t* ticket) {
     if (len > sizeof(ticket->data)) len = sizeof(ticket->data);
     // Enforce minimum ticket length (1+32+8+32+32+24 = 129), max 1+32+8+32+32+64 = 169
     if (len < 129 || len > 169) return -2;
+    // For now, assume input is already binary (this should be fixed to handle encoding)
+    // TODO: Add proper base64/hex decoding support for string inputs
+    return htx_ticket_parse_binary((const uint8_t*)input, len, ticket);
+}
+
+// Parse a ticket from binary data with explicit length
+int htx_ticket_parse_binary(const uint8_t* input, size_t input_len, htx_ticket_t* ticket) {
+    if (!input || !ticket) return -1;
+    if (input_len > sizeof(ticket->data)) return -1;
+    // Enforce minimum ticket length (1+32+8+32+32+24 = 129), max 1+32+8+32+32+64 = 169
+    if (input_len < 129 || input_len > 169) return -2;
+    
     // Parse fields in order
     size_t offset = 0;
-    uint8_t version = (uint8_t)input[offset++];
+    uint8_t version = input[offset++];
     if (version != 0x01) return -3;
     offset += 32; // cliPub32
     offset += 8;  // ticketKeyID8
     offset += 32; // nonce32
     offset += 32; // accessTicket32
-    size_t padlen = len - offset;
+    size_t padlen = input_len - offset;
     if (padlen < 24 || padlen > 64) return -4;
-    for (size_t i = offset; i < len; ++i) {
+    for (size_t i = offset; i < input_len; ++i) {
         if (input[i] != 0x00) return -5;
     }
-    memcpy(ticket->data, input, len);
-    ticket->len = len;
+    memcpy(ticket->data, input, input_len);
+    ticket->len = input_len;
     return 0;
 }
 

@@ -27,35 +27,43 @@ void make_valid_ticket(uint8_t *buf, size_t *len) {
 }
 
 int main(void) {
+    // Initialize BetaNet library first
+    betanet_init();
+    
     uint8_t ticket_buf[256];
     size_t ticket_len = 0;
     make_valid_ticket(ticket_buf, &ticket_len);
 
     htx_ticket_t ticket = {0};
-    int parse_result = htx_ticket_parse((const char*)ticket_buf, &ticket);
+    int parse_result = htx_ticket_parse_binary(ticket_buf, ticket_len, &ticket);
     if (parse_result != 0) {
-        printf("[FAIL] Ticket parse\n");
+        printf("[FAIL] Ticket parse (error code: %d)\n", parse_result);
+        betanet_shutdown();
         return 1;
     }
 
     int valid = htx_ticket_validate(&ticket);
     if (valid != 1) {
         printf("[FAIL] Ticket validate\n");
+        betanet_shutdown();
         return 1;
     }
 
     int replay1 = htx_ticket_check_replay(&ticket);
     if (replay1 != 0) {
         printf("[FAIL] Ticket replay check (first use)\n");
+        betanet_shutdown();
         return 1;
     }
 
     int replay2 = htx_ticket_check_replay(&ticket);
     if (replay2 != 1) {
         printf("[FAIL] Ticket replay check (second use)\n");
+        betanet_shutdown();
         return 1;
     }
 
     printf("[PASS] Ticket parse/validate/replay\n");
+    betanet_shutdown();
     return 0;
 }

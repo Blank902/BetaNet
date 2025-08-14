@@ -103,6 +103,13 @@ int htx_send_http2_preamble(htx_ctx_t* ctx);
 int htx_is_connected(htx_ctx_t* ctx);
 
 /**
+ * Server-side functions
+ */
+int htx_listen(htx_ctx_t* ctx, uint16_t port);
+int htx_accept(htx_ctx_t* ctx, htx_ctx_t** client_ctx);
+int htx_tls_accept(htx_ctx_t* ctx, const char* cert_file, const char* key_file);
+
+/**
  * Launch cover connections (stub, for anti-correlation).
  * Used to defeat linkability on UDP→TCP fallback (§5.6).
  * Returns 0 on success.

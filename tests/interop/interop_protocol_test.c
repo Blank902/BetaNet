@@ -41,6 +41,11 @@ static int test_htx_transport() {
 // Section 6: Modern ALPN and transition header logic (should be prohibited on public network)
 static int test_modern_alpn_and_transition() {
     htx_ctx_t *ctx = betanet_ctx_create();
+    if (!ctx) {
+        printf("[FAIL] Failed to create context for modern ALPN test\n");
+        return 0;
+    }
+    
     // TODO: Set ALPN to "betanet/htx/1.1.0" if API supports it
     int result = betanet_connect_with_ticket(ctx, "127.0.0.1", 443, NULL);
     // Simulate check for transition header on public network (should not be present)
@@ -80,6 +85,9 @@ int test_voucher_handling(void) {
 }
 
 int main(void) {
+    // Initialize BetaNet library first
+    betanet_init();
+    
     int pass = 1;
     // Section 10: Testing Plan – Interop and regression
  
@@ -113,5 +121,6 @@ int main(void) {
         pass = 0;
     }
 
+    betanet_shutdown();
     return pass ? 0 : 1;
 }

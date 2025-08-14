@@ -346,7 +346,7 @@ int noise_channel_handshake_responder(noise_channel_t* chan, htx_ctx_t* htx) {
 #ifdef BETANET_ENABLE_PQ_HYBRID
     // Receive kyber_pk if PQ hybrid enabled
     uint8_t kyber_pk[KYBER_PUBLICKEYBYTES];
-    if (SSL_read(htx->tcp.ssl, kyber_pk, KYBER_PUBLICKEYBYTES) != KYBER_PUBLICKEYBYTES) return -1;
+    if (SSL_read(htx->state.tcp.ssl, kyber_pk, KYBER_PUBLICKEYBYTES) != KYBER_PUBLICKEYBYTES) return -1;
 #endif
 
     // Send re_pub (always)

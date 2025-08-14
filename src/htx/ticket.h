@@ -46,6 +46,14 @@ typedef struct htx_ticket_s {
 int htx_ticket_parse(const char* input, htx_ticket_t* ticket);
 
 /*
+ * htx_ticket_parse_binary:
+ * Parse a ticket from binary data with explicit length.
+ * Enforces field order and padding as per README.md 151.
+ * Returns 0 on success, negative on error.
+ */
+int htx_ticket_parse_binary(const uint8_t* input, size_t input_len, htx_ticket_t* ticket);
+
+/*
  * htx_ticket_validate:
  * Validate a ticket's structure and cryptographic signature.
  * Checks carrier, field order, and padding as per README.md 151-152.
