@@ -3,6 +3,7 @@ C:\Users\xxlmn\Documents\BetaNet\src\htx\htx.c;C:\Users\xxlmn\Documents\BetaNet\
 C:\Users\xxlmn\Documents\BetaNet\src\htx\ticket.c;C:\Users\xxlmn\Documents\BetaNet\build\libbetanetc\betanetc.dir\Debug\ticket.obj
 C:\Users\xxlmn\Documents\BetaNet\src\htx\htx_tickets.c;C:\Users\xxlmn\Documents\BetaNet\build\libbetanetc\betanetc.dir\Debug\htx_tickets.obj
 C:\Users\xxlmn\Documents\BetaNet\src\htx\htx_frames.c;C:\Users\xxlmn\Documents\BetaNet\build\libbetanetc\betanetc.dir\Debug\htx_frames.obj
+C:\Users\xxlmn\Documents\BetaNet\src\htx\htx_noise_integration.c;C:\Users\xxlmn\Documents\BetaNet\build\libbetanetc\betanetc.dir\Debug\htx_noise_integration.obj
 C:\Users\xxlmn\Documents\BetaNet\src\noise\noise.c;C:\Users\xxlmn\Documents\BetaNet\build\libbetanetc\betanetc.dir\Debug\noise.obj
 C:\Users\xxlmn\Documents\BetaNet\src\shape\shape.c;C:\Users\xxlmn\Documents\BetaNet\build\libbetanetc\betanetc.dir\Debug\shape.obj
 C:\Users\xxlmn\Documents\BetaNet\src\path\path.c;C:\Users\xxlmn\Documents\BetaNet\build\libbetanetc\betanetc.dir\Debug\path.obj

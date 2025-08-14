@@ -16,6 +16,9 @@
     <ClCompile Include="C:\Users\xxlmn\Documents\BetaNet\src\htx\htx_frames.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="C:\Users\xxlmn\Documents\BetaNet\src\htx\htx_noise_integration.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="C:\Users\xxlmn\Documents\BetaNet\src\noise\noise.c">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -52,6 +55,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="C:\Users\xxlmn\Documents\BetaNet\include\betanet\htx_frames.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\Users\xxlmn\Documents\BetaNet\include\betanet\htx_noise_integration.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

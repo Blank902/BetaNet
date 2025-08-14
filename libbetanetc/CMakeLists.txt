@@ -7,10 +7,12 @@ add_library(betanetc
     ../include/betanet/betanet.h
     ../include/betanet/scion.h
     ../include/betanet/htx_frames.h
+    ../include/betanet/htx_noise_integration.h
     ../src/htx/htx.c
     ../src/htx/ticket.c
     ../src/htx/htx_tickets.c
     ../src/htx/htx_frames.c
+    ../src/htx/htx_noise_integration.c
     ../src/noise/noise.c
     ../src/shape/shape.c
     ../src/path/path.c

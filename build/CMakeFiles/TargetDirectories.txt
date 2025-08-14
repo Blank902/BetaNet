@@ -18,4 +18,5 @@ C:/Users/xxlmn/Documents/BetaNet/build/tests/integration/CMakeFiles/performance_
 C:/Users/xxlmn/Documents/BetaNet/build/tests/integration/CMakeFiles/scion_test.dir
 C:/Users/xxlmn/Documents/BetaNet/build/tests/integration/CMakeFiles/htx_tickets_test.dir
 C:/Users/xxlmn/Documents/BetaNet/build/tests/integration/CMakeFiles/htx_frames_test.dir
+C:/Users/xxlmn/Documents/BetaNet/build/tests/integration/CMakeFiles/htx_noise_integration_test.dir
 C:/Users/xxlmn/Documents/BetaNet/build/tests/integration/CMakeFiles/RUN_TESTS.dir

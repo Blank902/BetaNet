@@ -28,11 +28,16 @@ add_executable(htx_frames_test htx_frames_test.c)
 target_link_libraries(htx_frames_test betanetc)
 target_include_directories(htx_frames_test PRIVATE ${CMAKE_SOURCE_DIR})
 
+add_executable(htx_noise_integration_test htx_noise_integration_test.c)
+target_link_libraries(htx_noise_integration_test betanetc)
+target_include_directories(htx_noise_integration_test PRIVATE ${CMAKE_SOURCE_DIR})
+
 # Add to CTest
 add_test(NAME noise_handshake_integration COMMAND noise_handshake_test)
 add_test(NAME scion_integration COMMAND scion_test)
 add_test(NAME htx_tickets_integration COMMAND htx_tickets_test)
 add_test(NAME htx_frames_integration COMMAND htx_frames_test)
+add_test(NAME htx_noise_integration COMMAND htx_noise_integration_test)
 add_test(NAME tls_server_demo COMMAND tls_server_demo)
 add_test(NAME end_to_end_test COMMAND end_to_end_test)
 add_test(NAME performance_test COMMAND performance_test)

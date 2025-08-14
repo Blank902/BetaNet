@@ -193,6 +193,10 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
       <Project>{EA490CD0-F6B0-3AB2-AF32-F4116FB66317}</Project>
       <Name>htx_frames_test</Name>
     </ProjectReference>
+    <ProjectReference Include="C:\Users\xxlmn\Documents\BetaNet\build\tests\integration\htx_noise_integration_test.vcxproj">
+      <Project>{0736F53F-5CEA-38FC-AAF6-0DB1F00505B5}</Project>
+      <Name>htx_noise_integration_test</Name>
+    </ProjectReference>
     <ProjectReference Include="C:\Users\xxlmn\Documents\BetaNet\build\tests\integration\htx_tickets_test.vcxproj">
       <Project>{394B631C-A87E-322F-9B44-3AA969614B0D}</Project>
       <Name>htx_tickets_test</Name>
