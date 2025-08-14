@@ -1,4 +1,108 @@
 
+# Build directories and artifacts
+build/
+cmake-build-*/
+.build/
+out/
 
-#Ignore vscode AI rules
-.github\copilot-instructions.md
+# IDE and editor files
+.vs/
+.vscode/
+*.swp
+*.swo
+*~
+.idea/
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# Windows specific
+*.tmp
+*.temp
+*.obj
+*.pdb
+*.exe
+*.dll
+*.lib
+*.exp
+*.ilk
+*.tlog
+
+# Debug and release directories
+Debug/
+Release/
+RelWithDebInfo/
+MinSizeRel/
+x64/
+x86/
+Win32/
+
+# CMake generated files
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+CTestTestfile.cmake
+install_manifest.txt
+compile_commands.json
+*.vcxproj
+*.vcxproj.filters
+*.vcxproj.user
+*.sln
+
+# Test output files
+Testing/
+*.log
+test_*.pem
+test_*.key
+
+# Documentation generation
+docs/_build/
+docs/html/
+docs/latex/
+
+# Temporary files
+*.tmp
+*.bak
+*.backup
+*~
+
+# Certificate and key files (except test certificates that are committed)
+*.pem
+*.key
+*.crt
+*.cer
+*.p12
+*.pfx
+# But keep test certificates
+!test_cert.pem
+!test_key.pem
+
+# Performance and profiling output
+*.prof
+*.gcov
+*.gcda
+*.gcno
+callgrind.out.*
+massif.out.*
+
+# Package manager artifacts
+vcpkg_installed/
+conan/
+
+# Static analysis output
+.sonar/
+cppcheck-*.xml
+scan-build-*/
+
+# Memory bank files (workspace-specific)
+memory-bank/
+
+# Ignore VSCode AI rules
+.github/copilot-instructions.md
