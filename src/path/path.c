@@ -1,4 +1,5 @@
 #include "path.h"
+#include "../../include/betanet/secure_utils.h"
 #include <string.h>
 #include <time.h>
 #include <stdlib.h>
@@ -167,8 +168,9 @@ int betanet_pow_generate_challenge(betanet_pow_challenge_t* challenge, const cha
     challenge->nonce = ((uint64_t)rand() << 32) | rand();
     challenge->difficulty = difficulty;
     challenge->timestamp = (uint64_t)time(NULL);
-    strncpy(challenge->client_id, client_id, sizeof(challenge->client_id) - 1);
-    challenge->client_id[sizeof(challenge->client_id) - 1] = '\0';
+    if (!secure_strcpy(challenge->client_id, sizeof(challenge->client_id), client_id)) {
+        return -1; // Failed to copy client ID
+    }
     // TODO: Store challenge in a map/list for later verification.
     // TODO: Integrate with betanet_rate_limit_entry_t tracking.
     return 0;
@@ -353,7 +355,9 @@ int betanet_mixnet_wrap_message(
     // Placeholder: simply copy plaintext to out_buf if space allows.
     if (!path || !plaintext || !out_buf || !out_wrapped_len) return -1;
     if (plaintext_len > out_buf_size) return -2;
-    memcpy(out_buf, plaintext, plaintext_len);
+    if (secure_memcpy(out_buf, out_buf_size, plaintext, plaintext_len) != SECURE_ERROR_NONE) {
+        return -1; // Failed to copy plaintext
+    }
     *out_wrapped_len = plaintext_len;
     // TODO: Apply layered encryption per Mixnet hop.
     // TODO: Support multipath splitting and reassembly.
@@ -377,7 +381,9 @@ int betanet_mixnet_unwrap_message(
     // Placeholder: simply copy wrapped to out_plaintext if space allows.
     if (!path || !wrapped || !out_plaintext || !out_plaintext_len) return -1;
     if (wrapped_len > out_plaintext_size) return -2;
-    memcpy(out_plaintext, wrapped, wrapped_len);
+    if (secure_memcpy(out_plaintext, out_plaintext_size, wrapped, wrapped_len) != SECURE_ERROR_NONE) {
+        return -1; // Failed to copy wrapped data
+    }
     *out_plaintext_len = wrapped_len;
     // TODO: Remove layered encryption per Mixnet hop.
     // TODO: Support multipath reassembly.

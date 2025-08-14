@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **CRITICAL**: Comprehensive security utility framework (`secure_utils.h/c`)
+- **CRITICAL**: Buffer overflow prevention for all memory operations
+- **CRITICAL**: Secure string handling with bounds checking
 - Comprehensive GitHub issue and pull request templates
 - Improved CI/CD pipeline with multi-platform testing
 - Code coverage reporting with Codacy integration
@@ -28,11 +31,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **CRITICAL**: 253 security vulnerabilities identified by Codacy analysis
+- **CRITICAL**: Buffer overflow vulnerabilities (CWE-120) in all modules
+- **CRITICAL**: Buffer over-read vulnerabilities (CWE-126) in cryptographic operations
+- **CRITICAL**: Unsafe string operations in HTX tickets, noise, path, and payment modules
+- **CRITICAL**: Memory corruption risks in AEAD framing and key derivation
 - Repository organization and file structure cleanup
 - Documentation formatting and consistency issues
 
 ### Security
 
+- **MAJOR**: Replaced all unsafe `strcpy`/`memcpy` operations with secure alternatives
+- **MAJOR**: Implemented comprehensive bounds checking for all memory operations
+- **MAJOR**: Added input validation and error handling for cryptographic functions
+- **MAJOR**: Enhanced protection against buffer overflow attacks
+- **MAJOR**: Secured client public key handling and ticket validation
+- **MAJOR**: Hardened Noise protocol implementation against memory corruption
 - Added security issue reporting template
 - Enhanced security testing in CI pipeline
 - Improved sanitizer coverage in automated testing

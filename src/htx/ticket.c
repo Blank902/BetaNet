@@ -1,4 +1,5 @@
 #include "ticket.h"
+#include "../../include/betanet/secure_utils.h"
 #include <string.h>
 #include <stdio.h>
 #include <stdint.h>
@@ -47,7 +48,9 @@ int htx_ticket_parse_binary(const uint8_t* input, size_t input_len, htx_ticket_t
     for (size_t i = offset; i < input_len; ++i) {
         if (input[i] != 0x00) return -5;
     }
-    memcpy(ticket->data, input, input_len);
+    if (secure_memcpy(ticket->data, sizeof(ticket->data), input, input_len) != SECURE_ERROR_NONE) {
+        return -1; // Failed to copy ticket data
+    }
     ticket->len = input_len;
     return 0;
 }
@@ -94,7 +97,9 @@ static size_t ticket_cache_count = 0;
 
 static int extract_cliPub_hour(const htx_ticket_t* ticket, uint8_t* cliPub, uint64_t* hour_out) {
     if (!ticket || ticket->len < 129) return -1;
-    memcpy(cliPub, ticket->data + 1, 32);
+    if (secure_memcpy(cliPub, 32, ticket->data + 1, 32) != SECURE_ERROR_NONE) {
+        return -1; // Failed to extract client public key
+    }
     time_t now = time(NULL);
     *hour_out = (uint64_t)(now / 3600);
     return 0;
@@ -121,7 +126,9 @@ int htx_ticket_check_replay(const htx_ticket_t* ticket) {
         }
     }
     size_t idx = ticket_cache_count % MAX_TICKET_CACHE;
-    memcpy(ticket_cache[idx].cliPub, cliPub, 32);
+    if (secure_memcpy(ticket_cache[idx].cliPub, sizeof(ticket_cache[idx].cliPub), cliPub, 32) != SECURE_ERROR_NONE) {
+        return -1; // Failed to cache client public key
+    }
     ticket_cache[idx].hour = hour;
     ticket_cache[idx].timestamp = now;
     ticket_cache_count++;

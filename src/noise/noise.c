@@ -21,6 +21,7 @@
 //   - See stub/incomplete markers below.
  */
 #include "noise.h"
+#include "../../include/betanet/secure_utils.h"
 #include <openssl/evp.h>
 #include <openssl/rand.h>
 #include <openssl/crypto.h>
@@ -257,8 +258,10 @@ static void hkdf_sha256(const uint8_t *ck, const uint8_t *input, size_t input_le
     HMAC(EVP_sha256(), prk, 32, &c, 1, t1, &len);
     c = 2;
     HMAC(EVP_sha256(), prk, 32, t1, 32 + 1, t2, &len);
-    memcpy(out1, t1, 32);
-    memcpy(out2, t2, 32);
+    if (secure_memcpy(out1, 32, t1, 32) != SECURE_ERROR_NONE ||
+        secure_memcpy(out2, 32, t2, 32) != SECURE_ERROR_NONE) {
+        return; // Failed to copy HKDF outputs
+    }
 }
 
 // --- API Implementation ---
@@ -309,8 +312,10 @@ int noise_channel_handshake_initiator(noise_channel_t* chan, htx_ctx_t* htx) {
     if (noise_kyber768_decaps(re_kyber_ct, kyber_sk, kyber_ss) != 0) return -1;
     // Derive hybrid secret: concat(dh || kyber_ss)
     uint8_t hybrid_secret[32 + KYBER_SHAREDKEYBYTES];
-    memcpy(hybrid_secret, dh, 32);
-    memcpy(hybrid_secret + 32, kyber_ss, KYBER_SHAREDKEYBYTES);
+    if (secure_memcpy(hybrid_secret, sizeof(hybrid_secret), dh, 32) != SECURE_ERROR_NONE ||
+        secure_memcpy(hybrid_secret + 32, sizeof(hybrid_secret) - 32, kyber_ss, KYBER_SHAREDKEYBYTES) != SECURE_ERROR_NONE) {
+        return -1; // Failed to construct hybrid secret
+    }
     // Derive keys (tx_key, rx_key) = HKDF(hybrid_secret)
     hkdf_sha256(hybrid_secret, NULL, 0, chan->tx_key, chan->rx_key);
     // TODO: Negotiate/fallback if Kyber768 fails or is not supported by peer.
@@ -366,8 +371,10 @@ int noise_channel_handshake_responder(noise_channel_t* chan, htx_ctx_t* htx) {
 #ifdef BETANET_ENABLE_PQ_HYBRID
     // Derive hybrid secret: concat(dh || re_kyber_ss)
     uint8_t hybrid_secret[32 + KYBER_SHAREDKEYBYTES];
-    memcpy(hybrid_secret, dh, 32);
-    memcpy(hybrid_secret + 32, re_kyber_ss, KYBER_SHAREDKEYBYTES);
+    if (secure_memcpy(hybrid_secret, sizeof(hybrid_secret), dh, 32) != SECURE_ERROR_NONE ||
+        secure_memcpy(hybrid_secret + 32, sizeof(hybrid_secret) - 32, re_kyber_ss, KYBER_SHAREDKEYBYTES) != SECURE_ERROR_NONE) {
+        return -1; // Failed to construct hybrid secret
+    }
     // Derive keys (tx_key, rx_key) = HKDF(hybrid_secret)
     hkdf_sha256(hybrid_secret, NULL, 0, chan->tx_key, chan->rx_key);
     // TODO: Negotiate/fallback if Kyber768 fails or is not supported by peer.
@@ -401,8 +408,10 @@ int noise_channel_rekey(noise_channel_t* chan) {
     // Derive new keys from current keys (simple HKDF)
     uint8_t new_tx[32], new_rx[32];
     hkdf_sha256(chan->tx_key, NULL, 0, new_tx, new_rx);
-    memcpy(chan->tx_key, new_tx, 32);
-    memcpy(chan->rx_key, new_rx, 32);
+    if (secure_memcpy(chan->tx_key, sizeof(chan->tx_key), new_tx, 32) != SECURE_ERROR_NONE ||
+        secure_memcpy(chan->rx_key, sizeof(chan->rx_key), new_rx, 32) != SECURE_ERROR_NONE) {
+        return -1; // Failed to update channel keys
+    }
     chan->tx_nonce = 0;
     chan->rx_nonce = 0;
     chan->tx_bytes = 0;
@@ -435,7 +444,9 @@ int noise_channel_send(noise_channel_t* chan, const uint8_t* msg, size_t msg_len
     }
 
     uint8_t nonce[12] = {0};
-    memcpy(nonce + 4, &chan->tx_nonce, 8); // little-endian
+    if (secure_memcpy(nonce + 4, sizeof(nonce) - 4, &chan->tx_nonce, 8) != SECURE_ERROR_NONE) {
+        return -1; // Failed to construct nonce
+    }
     chan->tx_nonce++;
 
     uint8_t ciphertext[4096 + 16];
@@ -447,9 +458,11 @@ int noise_channel_send(noise_channel_t* chan, const uint8_t* msg, size_t msg_len
     uint8_t frame[2 + 12 + 4096 + 16];
     frame[0] = frame_len & 0xFF;
     frame[1] = (frame_len >> 8) & 0xFF;
-    memcpy(frame + 2, nonce, 12);
-    memcpy(frame + 14, ciphertext, clen);
-    memcpy(frame + 14 + clen, tag, 16);
+    if (secure_memcpy(frame + 2, sizeof(frame) - 2, nonce, 12) != SECURE_ERROR_NONE ||
+        secure_memcpy(frame + 14, sizeof(frame) - 14, ciphertext, clen) != SECURE_ERROR_NONE ||
+        secure_memcpy(frame + 14 + clen, sizeof(frame) - 14 - clen, tag, 16) != SECURE_ERROR_NONE) {
+        return -1; // Failed to construct frame
+    }
 
     int sent = SSL_write(chan->htx->state.tcp.ssl, frame, 2 + 12 + clen + 16);
 
@@ -475,7 +488,10 @@ int noise_channel_recv(noise_channel_t* chan, uint8_t* out, size_t max_len, size
 
     // Extract nonce from header (little-endian)
     uint64_t rx_nonce_val = 0;
-    memcpy(&rx_nonce_val, hdr + 4, 8);
+    if (secure_memcpy(&rx_nonce_val, sizeof(rx_nonce_val), hdr + 4, 8) != SECURE_ERROR_NONE) {
+        free(ciphertext);
+        return -1; // Failed to extract nonce
+    }
 
     // Frame replay defense: reject if nonce <= last_rx_nonce
     if (rx_nonce_val <= chan->last_rx_nonce) {
@@ -486,7 +502,10 @@ int noise_channel_recv(noise_channel_t* chan, uint8_t* out, size_t max_len, size
     uint8_t plaintext[4096];
     int plen = chacha20poly1305_decrypt(chan->rx_key, hdr + 2, NULL, 0, ciphertext, frame_len - 16, tag, plaintext);
     if (plen < 0 || (size_t)plen > max_len) { free(ciphertext); return -6; }
-    memcpy(out, plaintext, plen);
+    if (secure_memcpy(out, max_len, plaintext, plen) != SECURE_ERROR_NONE) {
+        free(ciphertext);
+        return -1; // Failed to copy output
+    }
     *out_len = plen;
     free(ciphertext);
     chan->rx_nonce++;

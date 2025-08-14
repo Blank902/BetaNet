@@ -1,4 +1,5 @@
 #include "pay.h"
+#include "../../include/betanet/secure_utils.h"
 #include <string.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -28,8 +29,9 @@ int pay_pow_generate_challenge(pay_pow_challenge_t* challenge, const char* clien
     challenge->nonce = ((uint64_t)rand() << 32) | rand();
     challenge->difficulty = difficulty;
     challenge->timestamp = (uint64_t)time(NULL);
-    strncpy(challenge->client_id, client_id, sizeof(challenge->client_id) - 1);
-    challenge->client_id[sizeof(challenge->client_id) - 1] = '\0';
+    if (!secure_strcpy(challenge->client_id, sizeof(challenge->client_id), client_id)) {
+        return -1; // Failed to copy client ID
+    }
     // TODO: Store challenge in a map/list for later verification.
     // TODO: Integrate with pay_rate_limit_entry_t tracking.
     return 0;
@@ -114,7 +116,9 @@ int pay_validate_voucher(const cashu_voucher_t *voucher, size_t voucher_len) {
         return -4; // Invalid signature
     }
     // Mark as redeemed (for demo)
-    memcpy(last_redeemed_secret, voucher->secret, 32);
+    if (secure_memcpy(last_redeemed_secret, sizeof(last_redeemed_secret), voucher->secret, 32) != SECURE_ERROR_NONE) {
+        return -1; // Failed to mark voucher as redeemed
+    }
     return 0;
 }
 
@@ -188,7 +192,9 @@ int pay_settle_voucher(const cashu_voucher_t *voucher) {
     if (!voucher) return -1;
     // Mark voucher as redeemed (reuse validation logic)
     static uint8_t last_redeemed_secret[32] = {0};
-    memcpy(last_redeemed_secret, voucher->secret, 32);
+    if (secure_memcpy(last_redeemed_secret, sizeof(last_redeemed_secret), voucher->secret, 32) != SECURE_ERROR_NONE) {
+        return -1; // Failed to mark voucher as redeemed
+    }
 
     // Simulate Lightning settlement threshold
     static int voucher_count = 0;

@@ -17,6 +17,7 @@
  */
 
 #include "../../include/betanet/htx_tickets.h"
+#include "../../include/betanet/secure_utils.h"
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -245,7 +246,9 @@ int htx_ticket_server_init(htx_ticket_server_config_t* config, const htx_carrier
     }
     
     // Copy carrier policy
-    memcpy(&config->policy, policy, sizeof(htx_carrier_policy_t));
+    if (secure_memcpy(&config->policy, sizeof(config->policy), policy, sizeof(htx_carrier_policy_t)) != SECURE_ERROR_NONE) {
+        return -1; // Failed to copy carrier policy
+    }
     
     // Validate policy probabilities sum to ~1.0
     float total_prob = policy->cookie_prob + policy->query_prob + policy->body_prob;
@@ -327,7 +330,11 @@ int htx_ticket_record_usage(const uint8_t* client_pubkey, uint64_t hour) {
         replay_tracker_count--;
     }
     
-    memcpy(replay_tracker[replay_tracker_count].client_pubkey, client_pubkey, HTX_TICKET_PUBKEY_SIZE);
+    if (!secure_memcpy(replay_tracker[replay_tracker_count].client_pubkey, 
+                       sizeof(replay_tracker[replay_tracker_count].client_pubkey),
+                       client_pubkey, HTX_TICKET_PUBKEY_SIZE)) {
+        return -1; // Failed to copy client public key
+    }
     replay_tracker[replay_tracker_count].hour = hour;
     replay_tracker[replay_tracker_count].recorded_at = time(NULL);
     replay_tracker_count++;
@@ -341,7 +348,7 @@ int htx_ticket_server_verify(const htx_ticket_server_config_t* config,
     if (!config || !payload || !result || payload_len < 1 + HTX_TICKET_PUBKEY_SIZE + HTX_TICKET_KEYID_SIZE + HTX_TICKET_NONCE_SIZE + HTX_TICKET_ACCESS_SIZE) {
         if (result) {
             result->is_valid = false;
-            strcpy(result->rejection_reason, "Invalid parameters");
+            secure_strcpy(result->rejection_reason, sizeof(result->rejection_reason), "Invalid parameters");
         }
         return -1;
     }
@@ -354,20 +361,24 @@ int htx_ticket_server_verify(const htx_ticket_server_config_t* config,
     // Version check
     if (payload[offset] != 0x01) {
         result->is_valid = false;
-        strcpy(result->rejection_reason, "Invalid version");
+        secure_strcpy(result->rejection_reason, sizeof(result->rejection_reason), "Invalid version");
         ticket_stats.tickets_rejected++;
         return -1;
     }
     offset++;
     
     // Extract client public key
-    memcpy(result->client_pubkey, &payload[offset], HTX_TICKET_PUBKEY_SIZE);
+    if (secure_memcpy(result->client_pubkey, sizeof(result->client_pubkey), &payload[offset], HTX_TICKET_PUBKEY_SIZE) != SECURE_ERROR_NONE) {
+        result->is_valid = false;
+        secure_strcpy(result->rejection_reason, sizeof(result->rejection_reason), "Invalid client public key");
+        return -1;
+    }
     offset += HTX_TICKET_PUBKEY_SIZE;
     
     // Verify key ID
     if (memcmp(&payload[offset], config->key_id, HTX_TICKET_KEYID_SIZE) != 0) {
         result->is_valid = false;
-        strcpy(result->rejection_reason, "Invalid key ID");
+        secure_strcpy(result->rejection_reason, sizeof(result->rejection_reason), "Invalid key ID");
         ticket_stats.tickets_rejected++;
         return -1;
     }
@@ -375,12 +386,20 @@ int htx_ticket_server_verify(const htx_ticket_server_config_t* config,
     
     // Extract nonce
     uint8_t nonce[HTX_TICKET_NONCE_SIZE];
-    memcpy(nonce, &payload[offset], HTX_TICKET_NONCE_SIZE);
+    if (secure_memcpy(nonce, sizeof(nonce), &payload[offset], HTX_TICKET_NONCE_SIZE) != SECURE_ERROR_NONE) {
+        result->is_valid = false;
+        secure_strcpy(result->rejection_reason, sizeof(result->rejection_reason), "Invalid nonce");
+        return -1;
+    }
     offset += HTX_TICKET_NONCE_SIZE;
     
     // Extract claimed access ticket
     uint8_t claimed_ticket[HTX_TICKET_ACCESS_SIZE];
-    memcpy(claimed_ticket, &payload[offset], HTX_TICKET_ACCESS_SIZE);
+    if (secure_memcpy(claimed_ticket, sizeof(claimed_ticket), &payload[offset], HTX_TICKET_ACCESS_SIZE) != SECURE_ERROR_NONE) {
+        result->is_valid = false;
+        secure_strcpy(result->rejection_reason, sizeof(result->rejection_reason), "Invalid access ticket");
+        return -1;
+    }
     
     // Verify for current hour and adjacent hours (±1)
     uint64_t current_hour = htx_ticket_get_hour_timestamp();
@@ -392,7 +411,7 @@ int htx_ticket_server_verify(const htx_ticket_server_config_t* config,
         // Check for replay
         if (htx_ticket_is_duplicate(result->client_pubkey, hour)) {
             result->is_valid = false;
-            strcpy(result->rejection_reason, "Duplicate ticket");
+            secure_strcpy(result->rejection_reason, sizeof(result->rejection_reason), "Duplicate ticket");
             ticket_stats.tickets_rejected++;
             return -1;
         }
@@ -405,8 +424,10 @@ int htx_ticket_server_verify(const htx_ticket_server_config_t* config,
         
         // Compute salt: SHA256("betanet-ticket-v1" || key_id || hour)
         uint8_t salt_input[17 + HTX_TICKET_KEYID_SIZE + 8];
-        memcpy(salt_input, "betanet-ticket-v1", 17);
-        memcpy(&salt_input[17], config->key_id, HTX_TICKET_KEYID_SIZE);
+        if (secure_memcpy(salt_input, sizeof(salt_input), "betanet-ticket-v1", 17) != SECURE_ERROR_NONE ||
+            secure_memcpy(&salt_input[17], sizeof(salt_input) - 17, config->key_id, HTX_TICKET_KEYID_SIZE) != SECURE_ERROR_NONE) {
+            continue;
+        }
         
         // Convert hour to big-endian
         uint64_t hour_be = hour;
@@ -437,7 +458,7 @@ int htx_ticket_server_verify(const htx_ticket_server_config_t* config,
     }
     
     result->is_valid = false;
-    strcpy(result->rejection_reason, "Invalid access ticket");
+    secure_strcpy(result->rejection_reason, sizeof(result->rejection_reason), "Invalid access ticket");
     ticket_stats.tickets_rejected++;
     return -1;
 }
@@ -478,8 +499,10 @@ int htx_ticket_client_create_request(htx_ticket_request_t* request,
     }
     
     // Copy server info
-    memcpy(request->server_pubkey, server_pubkey, HTX_TICKET_PUBKEY_SIZE);
-    memcpy(request->key_id, key_id, HTX_TICKET_KEYID_SIZE);
+    if (secure_memcpy(request->server_pubkey, sizeof(request->server_pubkey), server_pubkey, HTX_TICKET_PUBKEY_SIZE) != SECURE_ERROR_NONE ||
+        secure_memcpy(request->key_id, sizeof(request->key_id), key_id, HTX_TICKET_KEYID_SIZE) != SECURE_ERROR_NONE) {
+        return -1; // Failed to copy server information
+    }
     
     // Select carrier based on policy
     request->selected_carrier = select_carrier_by_policy(policy);
@@ -508,8 +531,10 @@ int htx_ticket_client_generate(const htx_ticket_request_t* request, htx_access_t
     
     // Compute salt: SHA256("betanet-ticket-v1" || key_id || hour)
     uint8_t salt_input[17 + HTX_TICKET_KEYID_SIZE + 8];
-    memcpy(salt_input, "betanet-ticket-v1", 17);
-    memcpy(&salt_input[17], request->key_id, HTX_TICKET_KEYID_SIZE);
+    if (secure_memcpy(salt_input, sizeof(salt_input), "betanet-ticket-v1", 17) != SECURE_ERROR_NONE ||
+        secure_memcpy(&salt_input[17], sizeof(salt_input) - 17, request->key_id, HTX_TICKET_KEYID_SIZE) != SECURE_ERROR_NONE) {
+        return -1; // Failed to build salt input
+    }
     
     // Convert hour to big-endian
     uint64_t hour_be = ticket->hour_timestamp;
@@ -542,10 +567,12 @@ int htx_ticket_client_encode(const htx_ticket_request_t* request,
     payload->version = 0x01;
     
     // Copy fields
-    memcpy(payload->client_pubkey, request->client_pubkey, HTX_TICKET_PUBKEY_SIZE);
-    memcpy(payload->key_id, request->key_id, HTX_TICKET_KEYID_SIZE);
-    memcpy(payload->nonce, request->nonce, HTX_TICKET_NONCE_SIZE);
-    memcpy(payload->access_ticket, ticket->access_ticket, HTX_TICKET_ACCESS_SIZE);
+    if (secure_memcpy(payload->client_pubkey, sizeof(payload->client_pubkey), request->client_pubkey, HTX_TICKET_PUBKEY_SIZE) != SECURE_ERROR_NONE ||
+        secure_memcpy(payload->key_id, sizeof(payload->key_id), request->key_id, HTX_TICKET_KEYID_SIZE) != SECURE_ERROR_NONE ||
+        secure_memcpy(payload->nonce, sizeof(payload->nonce), request->nonce, HTX_TICKET_NONCE_SIZE) != SECURE_ERROR_NONE ||
+        secure_memcpy(payload->access_ticket, sizeof(payload->access_ticket), ticket->access_ticket, HTX_TICKET_ACCESS_SIZE) != SECURE_ERROR_NONE) {
+        return -1; // Failed to copy payload fields
+    }
     
     // Calculate required padding
     size_t fixed_size = 1 + HTX_TICKET_PUBKEY_SIZE + HTX_TICKET_KEYID_SIZE + HTX_TICKET_NONCE_SIZE + HTX_TICKET_ACCESS_SIZE;
@@ -584,16 +611,31 @@ int htx_ticket_format_cookie(const htx_ticket_payload_t* payload,
     // Pack binary data
     size_t offset = 0;
     binary_data[offset++] = payload->version;
-    memcpy(&binary_data[offset], payload->client_pubkey, HTX_TICKET_PUBKEY_SIZE);
+    if (secure_memcpy(&binary_data[offset], binary_len - offset, payload->client_pubkey, HTX_TICKET_PUBKEY_SIZE) != SECURE_ERROR_NONE) {
+        free(binary_data);
+        return -1;
+    }
     offset += HTX_TICKET_PUBKEY_SIZE;
-    memcpy(&binary_data[offset], payload->key_id, HTX_TICKET_KEYID_SIZE);
+    if (secure_memcpy(&binary_data[offset], binary_len - offset, payload->key_id, HTX_TICKET_KEYID_SIZE) != SECURE_ERROR_NONE) {
+        free(binary_data);
+        return -1;
+    }
     offset += HTX_TICKET_KEYID_SIZE;
-    memcpy(&binary_data[offset], payload->nonce, HTX_TICKET_NONCE_SIZE);
+    if (secure_memcpy(&binary_data[offset], binary_len - offset, payload->nonce, HTX_TICKET_NONCE_SIZE) != SECURE_ERROR_NONE) {
+        free(binary_data);
+        return -1;
+    }
     offset += HTX_TICKET_NONCE_SIZE;
-    memcpy(&binary_data[offset], payload->access_ticket, HTX_TICKET_ACCESS_SIZE);
+    if (secure_memcpy(&binary_data[offset], binary_len - offset, payload->access_ticket, HTX_TICKET_ACCESS_SIZE) != SECURE_ERROR_NONE) {
+        free(binary_data);
+        return -1;
+    }
     offset += HTX_TICKET_ACCESS_SIZE;
     if (payload->padding_len > 0) {
-        memcpy(&binary_data[offset], payload->padding, payload->padding_len);
+        if (secure_memcpy(&binary_data[offset], binary_len - offset, payload->padding, payload->padding_len) != SECURE_ERROR_NONE) {
+            free(binary_data);
+            return -1;
+        }
     }
     
     // Base64URL encode
@@ -629,16 +671,31 @@ int htx_ticket_format_query(const htx_ticket_payload_t* payload, char* output, s
     // Pack binary data (same as cookie)
     size_t offset = 0;
     binary_data[offset++] = payload->version;
-    memcpy(&binary_data[offset], payload->client_pubkey, HTX_TICKET_PUBKEY_SIZE);
+    if (secure_memcpy(&binary_data[offset], binary_len - offset, payload->client_pubkey, HTX_TICKET_PUBKEY_SIZE) != SECURE_ERROR_NONE) {
+        free(binary_data);
+        return -1;
+    }
     offset += HTX_TICKET_PUBKEY_SIZE;
-    memcpy(&binary_data[offset], payload->key_id, HTX_TICKET_KEYID_SIZE);
+    if (secure_memcpy(&binary_data[offset], binary_len - offset, payload->key_id, HTX_TICKET_KEYID_SIZE) != SECURE_ERROR_NONE) {
+        free(binary_data);
+        return -1;
+    }
     offset += HTX_TICKET_KEYID_SIZE;
-    memcpy(&binary_data[offset], payload->nonce, HTX_TICKET_NONCE_SIZE);
+    if (secure_memcpy(&binary_data[offset], binary_len - offset, payload->nonce, HTX_TICKET_NONCE_SIZE) != SECURE_ERROR_NONE) {
+        free(binary_data);
+        return -1;
+    }
     offset += HTX_TICKET_NONCE_SIZE;
-    memcpy(&binary_data[offset], payload->access_ticket, HTX_TICKET_ACCESS_SIZE);
+    if (secure_memcpy(&binary_data[offset], binary_len - offset, payload->access_ticket, HTX_TICKET_ACCESS_SIZE) != SECURE_ERROR_NONE) {
+        free(binary_data);
+        return -1;
+    }
     offset += HTX_TICKET_ACCESS_SIZE;
     if (payload->padding_len > 0) {
-        memcpy(&binary_data[offset], payload->padding, payload->padding_len);
+        if (secure_memcpy(&binary_data[offset], binary_len - offset, payload->padding, payload->padding_len) != SECURE_ERROR_NONE) {
+            free(binary_data);
+            return -1;
+        }
     }
     
     char* encoded = malloc(binary_len * 2);
