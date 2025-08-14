@@ -7,6 +7,7 @@
 // for normative requirements and design rationale.
 
 #include "htx.h"
+#include "../../include/betanet/secure_log.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -39,8 +40,8 @@ static int htx_tcp_connect(const char* host, uint16_t port) {
     struct addrinfo hints, *res, *rp;
     int sockfd = -1;
     char portstr[8];
-    snprintf(portstr, sizeof(portstr), "%u", port);
-    memset(&hints, 0, sizeof(hints));
+    secure_snprintf(portstr, sizeof(portstr), "%u", port);
+    secure_memset(&hints, 0, sizeof(hints));
     hints.ai_family = AF_UNSPEC;
     hints.ai_socktype = SOCK_STREAM;
     if (getaddrinfo(host, portstr, &hints, &res) != 0)
@@ -61,7 +62,7 @@ htx_ctx_t* htx_ctx_create(htx_transport_type_t transport) {
     if (!ctx) return NULL;
     ctx->transport = transport;
     ctx->is_connected = 0;
-    memset(ctx->alpn_selected, 0, sizeof(ctx->alpn_selected));
+    secure_memset(ctx->alpn_selected, 0, sizeof(ctx->alpn_selected));
     ctx->shape_cfg = calloc(1, sizeof(shape_config_t));
     if (ctx->shape_cfg) shape_config_init(ctx->shape_cfg, SHAPE_PROFILE_NONE);
     if (transport == HTX_TRANSPORT_TCP) {
@@ -126,7 +127,7 @@ int htx_connect(htx_ctx_t* ctx, const char* host, uint16_t port, const char* alp
         ctx->state.udp.sockfd = socket(AF_INET, SOCK_DGRAM, 0);
         if (ctx->state.udp.sockfd < 0) return -1;
         struct sockaddr_in addr;
-        memset(&addr, 0, sizeof(addr));
+        secure_memset(&addr, 0, sizeof(addr));
         addr.sin_family = AF_INET;
         addr.sin_port = htons(port);
         if (inet_pton(AF_INET, host, &addr.sin_addr) <= 0) {
@@ -144,7 +145,7 @@ int htx_connect(htx_ctx_t* ctx, const char* host, uint16_t port, const char* alp
         // Multipath and MASQUE/CONNECT-UDP are not implemented. See [README.md:384-387], [technical-overview.md:152-191].
         // In a real implementation, this would establish a CONNECT-UDP tunnel via HTTP/3/QUIC proxy.
         // For now, just log the intent.
-        printf("[HTX] MASQUE/CONNECT-UDP logic placeholder: would establish UDP tunnel via proxy here.\n");
+        BETANET_LOG_INFO(BETANET_LOG_TAG_HTX, "[HTX] MASQUE/CONNECT-UDP logic placeholder: would establish UDP tunnel via proxy here.\n");
         return 0;
     }
     return -1;
@@ -169,7 +170,7 @@ int htx_tls_handshake(htx_ctx_t* ctx, const char* host, const char* alpn) {
         unsigned char alpn_proto[256];
         size_t alpn_len = strlen(alpn);
         alpn_proto[0] = (unsigned char)alpn_len;
-        memcpy(alpn_proto + 1, alpn, alpn_len);
+        secure_memcpy(alpn_proto + 1, sizeof(alpn_proto + 1), alpn, alpn_len);
         SSL_set_alpn_protos(ctx->state.tcp.ssl, alpn_proto, (unsigned int)(alpn_len + 1));
     }
     if (SSL_connect(ctx->state.tcp.ssl) != 1) return -1;
@@ -179,7 +180,7 @@ int htx_tls_handshake(htx_ctx_t* ctx, const char* host, const char* alpn) {
     SSL_get0_alpn_selected(ctx->state.tcp.ssl, &alpn_out, &alpn_outlen);
     if (alpn_out && alpn_outlen > 0) {
         size_t len = alpn_outlen < sizeof(ctx->alpn_selected) - 1 ? alpn_outlen : sizeof(ctx->alpn_selected) - 1;
-        memcpy(ctx->alpn_selected, alpn_out, len);
+        secure_memcpy(ctx->alpn_selected, sizeof(ctx->alpn_selected), alpn_out, len);
         ctx->alpn_selected[len] = 0;
     }
     return 0;
@@ -316,6 +317,8 @@ int htx_connect_with_fallback(htx_ctx_t* ctx, const char* host, uint16_t port, c
 #include <stdint.h>
 #include "htx.h"
 #include "../shape/shape.h"
+#include "../../include/betanet/secure_utils.h"
+#include "../../include/betanet/secure_log.h"
 
 // Send a jittered keepalive (PING) frame
 int htx_send_keepalive(htx_ctx_t* ctx) {
@@ -403,25 +406,25 @@ static int encode_transition_control_cbor(uint8_t* buf, size_t buflen,
     uint8_t* p = buf;
     *p++ = 0xA6; // map(6)
     // "prevAS": 0
-    *p++ = 0x66; memcpy(p, "prevAS", 6); p += 6;
+    *p++ = 0x66; secure_memcpy(p, sizeof(p), "prevAS", 6); p += 6;
     *p++ = 0x1B; for (int i = 7; i >= 0; --i) *p++ = (prevAS >> (i*8)) & 0xFF;
     // "nextAS": 1
-    *p++ = 0x66; memcpy(p, "nextAS", 6); p += 6;
+    *p++ = 0x66; secure_memcpy(p, sizeof(p), "nextAS", 6); p += 6;
     *p++ = 0x1B; for (int i = 7; i >= 0; --i) *p++ = (nextAS >> (i*8)) & 0xFF;
     // "ts": 2
-    *p++ = 0x62; memcpy(p, "ts", 2); p += 2;
+    *p++ = 0x62; secure_memcpy(p, sizeof(p), "ts", 2); p += 2;
     *p++ = 0x1B; for (int i = 7; i >= 0; --i) *p++ = (ts >> (i*8)) & 0xFF;
     // "flow": 3
-    *p++ = 0x64; memcpy(p, "flow", 4); p += 4;
+    *p++ = 0x64; secure_memcpy(p, sizeof(p), "flow", 4); p += 4;
     *p++ = 0x1B; for (int i = 7; i >= 0; --i) *p++ = (flow >> (i*8)) & 0xFF;
     // "nonce": 4
-    *p++ = 0x65; memcpy(p, "nonce", 5); p += 5;
+    *p++ = 0x65; secure_memcpy(p, sizeof(p), "nonce", 5); p += 5;
     *p++ = 0x1B; for (int i = 7; i >= 0; --i) *p++ = (nonce >> (i*8)) & 0xFF;
     // "sig": 5
-    *p++ = 0x63; memcpy(p, "sig", 3); p += 3;
+    *p++ = 0x63; secure_memcpy(p, sizeof(p), "sig", 3); p += 3;
     if (sig && siglen <= 32) {
         *p++ = 0x58; *p++ = (uint8_t)siglen;
-        memcpy(p, sig, siglen); p += siglen;
+        secure_memcpy(p, sizeof(p), sig, siglen); p += siglen;
     } else {
         *p++ = 0x40; // empty bstr
     }
@@ -443,7 +446,7 @@ int htx_open_transition_control_stream(htx_ctx_t* ctx,
     int cbor_len = encode_transition_control_cbor(cbor_buf, sizeof(cbor_buf), prevAS, nextAS, ts, flow, nonce, sig, siglen);
     if (cbor_len < 0) return -1;
 
-    printf("[HTX] Open transition control stream: prevAS=%llu nextAS=%llu ts=%llu\n", prevAS, nextAS, ts);
+    BETANET_LOG_INFO(BETANET_LOG_TAG_HTX, "[HTX] Open transition control stream: prevAS=%llu nextAS=%llu ts=%llu\n", prevAS, nextAS, ts);
 
     // Send as HTTP/2 DATA frame on stream 2 (for TCP)
     if (ctx->transport == HTX_TRANSPORT_TCP && ctx->state.tcp.ssl) {
@@ -482,7 +485,7 @@ int htx_validate_transition_control_stream(const uint8_t* cbor, size_t cbor_len)
 int htx_send_scion_payload(htx_ctx_t* ctx, const uint8_t* scion_pkt, size_t pkt_len)
 {
     if (!ctx || !scion_pkt || pkt_len == 0) return -1;
-    printf("[HTX] Encapsulate SCION payload of %zu bytes\n", pkt_len);
+    BETANET_LOG_INFO(BETANET_LOG_TAG_HTX, "[HTX] Encapsulate SCION payload of %zu bytes\n", pkt_len);
 
     // Send as HTTP/2 DATA frame on stream 4 (for TCP)
     if (ctx->transport == HTX_TRANSPORT_TCP && ctx->state.tcp.ssl) {
@@ -521,7 +524,7 @@ int htx_listen(htx_ctx_t* ctx, uint16_t port) {
     }
     
     struct sockaddr_in addr;
-    memset(&addr, 0, sizeof(addr));
+    secure_memset(&addr, 0, sizeof(addr));
     addr.sin_family = AF_INET;
     addr.sin_addr.s_addr = INADDR_ANY;
     addr.sin_port = htons(port);
@@ -576,7 +579,7 @@ int htx_tls_accept(htx_ctx_t* ctx, const char* cert_file, const char* key_file) 
     
     // Load certificate file
     if (SSL_CTX_use_certificate_file(ctx->state.tcp.ssl_ctx, cert_file, SSL_FILETYPE_PEM) <= 0) {
-        printf("[htx] Failed to load certificate file: %s\n", cert_file);
+        BETANET_LOG_ERROR(BETANET_LOG_TAG_HTX, "[htx] Failed to load certificate file: %s\n", cert_file);
         SSL_CTX_free(ctx->state.tcp.ssl_ctx);
         ctx->state.tcp.ssl_ctx = NULL;
         return -1;
@@ -584,7 +587,7 @@ int htx_tls_accept(htx_ctx_t* ctx, const char* cert_file, const char* key_file) 
     
     // Load private key file
     if (SSL_CTX_use_PrivateKey_file(ctx->state.tcp.ssl_ctx, key_file, SSL_FILETYPE_PEM) <= 0) {
-        printf("[htx] Failed to load private key file: %s\n", key_file);
+        BETANET_LOG_ERROR(BETANET_LOG_TAG_HTX, "[htx] Failed to load private key file: %s\n", key_file);
         SSL_CTX_free(ctx->state.tcp.ssl_ctx);
         ctx->state.tcp.ssl_ctx = NULL;
         return -1;
@@ -592,7 +595,7 @@ int htx_tls_accept(htx_ctx_t* ctx, const char* cert_file, const char* key_file) 
     
     // Verify that the private key matches the certificate
     if (!SSL_CTX_check_private_key(ctx->state.tcp.ssl_ctx)) {
-        printf("[htx] Private key does not match certificate\n");
+        BETANET_LOG_INFO(BETANET_LOG_TAG_HTX, "[htx] Private key does not match certificate\n");
         SSL_CTX_free(ctx->state.tcp.ssl_ctx);
         ctx->state.tcp.ssl_ctx = NULL;
         return -1;
@@ -617,7 +620,7 @@ int htx_tls_accept(htx_ctx_t* ctx, const char* cert_file, const char* key_file) 
     int accept_result = SSL_accept(ctx->state.tcp.ssl);
     if (accept_result != 1) {
         int ssl_error = SSL_get_error(ctx->state.tcp.ssl, accept_result);
-        printf("[htx] TLS handshake failed: %d (SSL error: %d)\n", accept_result, ssl_error);
+        BETANET_LOG_ERROR(BETANET_LOG_TAG_HTX, "[htx] TLS handshake failed: %d (SSL error: %d)\n", accept_result, ssl_error);
         SSL_free(ctx->state.tcp.ssl);
         SSL_CTX_free(ctx->state.tcp.ssl_ctx);
         ctx->state.tcp.ssl = NULL;
@@ -631,11 +634,11 @@ int htx_tls_accept(htx_ctx_t* ctx, const char* cert_file, const char* key_file) 
     SSL_get0_alpn_selected(ctx->state.tcp.ssl, &alpn_out, &alpn_outlen);
     if (alpn_out && alpn_outlen > 0) {
         size_t len = alpn_outlen < sizeof(ctx->alpn_selected) - 1 ? alpn_outlen : sizeof(ctx->alpn_selected) - 1;
-        memcpy(ctx->alpn_selected, alpn_out, len);
+        secure_memcpy(ctx->alpn_selected, sizeof(ctx->alpn_selected), alpn_out, len);
         ctx->alpn_selected[len] = '\0';
-        printf("[htx] ALPN selected: %s\n", ctx->alpn_selected);
+        BETANET_LOG_INFO(BETANET_LOG_TAG_HTX, "[htx] ALPN selected: %s\n", ctx->alpn_selected);
     }
     
-    printf("[htx] TLS server handshake completed successfully\n");
+    BETANET_LOG_INFO(BETANET_LOG_TAG_HTX, "[htx] TLS server handshake completed successfully\n");
     return 0;
 }

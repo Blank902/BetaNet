@@ -3,6 +3,8 @@
 
 #include "framing.h"
 #include <string.h>
+#include "../../include/betanet/secure_utils.h"
+#include "../../include/betanet/secure_log.h"
 
 // Encode a frame (framing + optional padding)
 // Returns 0 on success, -1 on error
@@ -18,8 +20,8 @@ int htx_frame_encode(
     hdr.type = (uint8_t)type;
     hdr.flags = 0;
     hdr.stream_id = 0;
-    memcpy(out, &hdr, 9); // Not wire format, just a stub
-    if (payload_len) memcpy(out + 9, payload, payload_len);
+    secure_memcpy(out, sizeof(out), &hdr, 9); // Not wire format, just a stub
+    if (payload_len) secure_memcpy(out + 9, sizeof(out + 9), payload, payload_len);
     if (written) *written = 9 + payload_len;
     return 0;
 }
@@ -33,7 +35,7 @@ int htx_frame_decode(
 {
     // Stub: expects at least 9 bytes for header
     if (in_len < 9) return -1;
-    if (header) memcpy(header, in, 9);
+    if (header) secure_memcpy(header, sizeof(header), in, 9);
     if (payload) *payload = in + 9;
     if (payload_len && header) *payload_len = header->length;
     return 0;
@@ -45,7 +47,7 @@ size_t htx_frame_add_padding(
 {
     // Stub: append zero bytes as padding, up to max_size
     if (frame_len + pad_len > max_size) pad_len = max_size - frame_len;
-    memset(frame + frame_len, 0, pad_len);
+    secure_memset(frame + frame_len, 0, pad_len);
     return frame_len + pad_len;
 }
 
@@ -60,6 +62,6 @@ size_t htx_frame_idle(uint8_t *out, size_t out_size)
     hdr.type = HTX_FRAME_IDLE;
     hdr.flags = 0;
     hdr.stream_id = 0;
-    memcpy(out, &hdr, 9);
+    secure_memcpy(out, sizeof(out), &hdr, 9);
     return 9;
 }

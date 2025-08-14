@@ -11,8 +11,8 @@ static int contains(uint32_t* arr, size_t count, uint32_t val) {
 
 void betanet_gov_compute_weights(betanet_gov_context_t* ctx) {
     // Reset
-    memset(ctx->as_weights, 0, sizeof(ctx->as_weights));
-    memset(ctx->org_weights, 0, sizeof(ctx->org_weights));
+    secure_memset(ctx->as_weights, 0, sizeof(ctx->as_weights));
+    secure_memset(ctx->org_weights, 0, sizeof(ctx->org_weights));
     ctx->as_count = ctx->org_count = ctx->isd_count = 0;
     ctx->total_weight = 0.0f;
 
@@ -304,6 +304,8 @@ int betanet_gov_update_proposal_status(betanet_proposal_t* proposal, float total
 // TODO: Add querying for proposal history and audit trails.
 
 #include <stdio.h>
+#include "../../include/betanet/secure_utils.h"
+#include "../../include/betanet/secure_log.h"
 
 /**
  * Stub: Load governance config from file or buffer (deferred).

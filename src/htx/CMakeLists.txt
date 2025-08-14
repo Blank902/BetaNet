@@ -1,4 +1,4 @@
-add_library(htx htx.c ticket.c htx_tickets.c)
+add_library(htx htx.c ticket.c htx_tickets.c http2_emulation.c)
 target_include_directories(htx PUBLIC ../../include)
 target_link_libraries(htx PUBLIC OpenSSL::SSL OpenSSL::Crypto)
 

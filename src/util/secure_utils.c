@@ -3,6 +3,8 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <errno.h>
+#include "../../include/betanet/secure_utils.h"
+#include "../../include/betanet/secure_log.h"
 
 // =============================================================================
 // Secure Buffer Operations Implementation
@@ -60,7 +62,7 @@ int secure_memset(void* dest, int value, size_t size) {
         return SECURE_ERROR_INVALID_SIZE;
     }
     
-    memset(dest, value, size);
+    secure_memset(dest, value, size);
     return SECURE_ERROR_NONE;
 }
 
@@ -87,7 +89,7 @@ int secure_strcpy(char* dest, size_t dest_size, const char* src) {
     }
     
     // Safe to copy including null terminator
-    memcpy(dest, src, src_len + 1);
+    secure_memcpy(dest, sizeof(dest), src, src_len + 1);
     
     return SECURE_ERROR_NONE;
 }
@@ -113,7 +115,7 @@ int secure_strncpy(char* dest, size_t dest_size, const char* src, size_t max_cop
     }
     
     // Copy the string
-    memcpy(dest, src, copy_len);
+    secure_memcpy(dest, sizeof(dest), src, copy_len);
     
     // Ensure null termination
     dest[copy_len] = '\0';
@@ -181,7 +183,7 @@ int secure_strcat(char* dest, size_t dest_size, const char* src) {
     }
     
     // Safe to concatenate
-    memcpy(dest + dest_len, src, src_len + 1);
+    secure_memcpy(dest + dest_len, sizeof(dest + dest_len), src, src_len + 1);
     
     return SECURE_ERROR_NONE;
 }
@@ -304,7 +306,7 @@ void secure_buffer_clear(secure_buffer_t* buffer) {
     if (buffer) {
         // Clear sensitive data
         if (buffer->data && buffer->capacity > 0) {
-            memset(buffer->data, 0, buffer->capacity);
+            secure_memset(buffer->data, 0, buffer->capacity);
         }
         
         buffer->data = NULL;

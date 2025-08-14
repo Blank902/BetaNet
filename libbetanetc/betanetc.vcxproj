@@ -293,14 +293,22 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     <ClInclude Include="C:\Users\xxlmn\Documents\BetaNet\include\betanet\scion.h" />
     <ClInclude Include="C:\Users\xxlmn\Documents\BetaNet\include\betanet\htx_frames.h" />
     <ClInclude Include="C:\Users\xxlmn\Documents\BetaNet\include\betanet\htx_noise_integration.h" />
+    <ClInclude Include="C:\Users\xxlmn\Documents\BetaNet\include\betanet\htx_transport.h" />
+    <ClInclude Include="C:\Users\xxlmn\Documents\BetaNet\include\betanet\htx_calibration.h" />
+    <ClInclude Include="C:\Users\xxlmn\Documents\BetaNet\include\betanet\path_optimization.h" />
+    <ClInclude Include="C:\Users\xxlmn\Documents\BetaNet\include\betanet\http2_emulation.h" />
     <ClCompile Include="C:\Users\xxlmn\Documents\BetaNet\src\htx\htx.c" />
     <ClCompile Include="C:\Users\xxlmn\Documents\BetaNet\src\htx\ticket.c" />
     <ClCompile Include="C:\Users\xxlmn\Documents\BetaNet\src\htx\htx_tickets.c" />
     <ClCompile Include="C:\Users\xxlmn\Documents\BetaNet\src\htx\htx_frames.c" />
     <ClCompile Include="C:\Users\xxlmn\Documents\BetaNet\src\htx\htx_noise_integration.c" />
+    <ClCompile Include="C:\Users\xxlmn\Documents\BetaNet\src\htx\htx_transport.c" />
+    <ClCompile Include="C:\Users\xxlmn\Documents\BetaNet\src\htx\http2_emulation.c" />
+    <ClCompile Include="C:\Users\xxlmn\Documents\BetaNet\src\htx\origin_calibration.c" />
     <ClCompile Include="C:\Users\xxlmn\Documents\BetaNet\src\noise\noise.c" />
     <ClCompile Include="C:\Users\xxlmn\Documents\BetaNet\src\shape\shape.c" />
     <ClCompile Include="C:\Users\xxlmn\Documents\BetaNet\src\path\path.c" />
+    <ClCompile Include="C:\Users\xxlmn\Documents\BetaNet\src\path\path_optimization.c" />
     <ClCompile Include="C:\Users\xxlmn\Documents\BetaNet\src\path\scion.c">
       <ObjectFileName>$(IntDir)/__/src/path/scion.c.obj</ObjectFileName>
     </ClCompile>

@@ -66,7 +66,7 @@ static int replay_marker_check(const uint8_t *id) {
 /* Add a new marker */
 static void replay_marker_add(const uint8_t *id) {
     size_t pos = replay_marker_head;
-    memcpy(replay_markers[pos].id, id, 32);
+    secure_memcpy(replay_markers[pos].id, sizeof(replay_markers[pos].id), id, 32);
     replay_markers[pos].timestamp = time(NULL);
     replay_markers[pos].valid = 1;
     replay_marker_head = (replay_marker_head + 1) % REPLAY_MARKER_MAX;
@@ -79,6 +79,8 @@ static void replay_marker_add(const uint8_t *id) {
 
 #include "boot.h"
 #include "../htx/ticket.h"
+#include "../../include/betanet/secure_utils.h"
+#include "../../include/betanet/secure_log.h"
 
 // Bootstrapping ticket admission: parse, validate, and check replay.
 // Returns 0 if valid and not replayed, 1 if replayed, 2 if rate-limited, negative on error.

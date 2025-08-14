@@ -1,5 +1,6 @@
 #include "pay.h"
 #include "../../include/betanet/secure_utils.h"
+#include "../../include/betanet/secure_log.h"
 #include <string.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -200,14 +201,14 @@ int pay_settle_voucher(const cashu_voucher_t *voucher) {
     static int voucher_count = 0;
     const int threshold = 5; // Example threshold
     voucher_count++;
-    printf("Settled voucher for keyset: ");
-    for (int i = 0; i < 4; ++i) printf("%02x", voucher->keyset_id[i]);
-    printf("... (count: %d)\n", voucher_count);
+    BETANET_LOG_INFO(BETANET_LOG_TAG_CORE, "Settled voucher for keyset: ");
+    for (int i = 0; i < 4; ++i) BETANET_LOG_INFO(BETANET_LOG_TAG_CORE, "%02x", voucher->keyset_id[i]);
+    BETANET_LOG_INFO(BETANET_LOG_TAG_CORE, "... (count: %d)\n", voucher_count);
 
     if (voucher_count >= threshold) {
-        printf("[Lightning] Settlement triggered for keyset: ");
-        for (int i = 0; i < 4; ++i) printf("%02x", voucher->keyset_id[i]);
-        printf("...\n");
+        BETANET_LOG_INFO(BETANET_LOG_TAG_CORE, "[Lightning] Settlement triggered for keyset: ");
+        for (int i = 0; i < 4; ++i) BETANET_LOG_INFO(BETANET_LOG_TAG_CORE, "%02x", voucher->keyset_id[i]);
+        BETANET_LOG_INFO(BETANET_LOG_TAG_CORE, "...\n");
         voucher_count = 0; // Reset for demo
     }
     return 0;

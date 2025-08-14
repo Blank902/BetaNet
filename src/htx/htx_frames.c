@@ -23,6 +23,8 @@
 #include <openssl/rand.h>
 #include <openssl/kdf.h>
 #include <openssl/params.h>
+#include "../../include/betanet/secure_utils.h"
+#include "../../include/betanet/secure_log.h"
 
 // ============================================================================
 // Internal Helper Functions
@@ -87,7 +89,7 @@ static size_t decode_varint(const uint8_t *buf, size_t buf_len, uint32_t *value)
  */
 static void construct_nonce(const uint8_t *nonce_salt, uint64_t counter, uint8_t *nonce) {
     // Clear nonce buffer
-    memset(nonce, 0, HTX_AEAD_NONCE_SIZE);
+    secure_memset(nonce, 0, HTX_AEAD_NONCE_SIZE);
     
     // Set little-endian counter in first 8 bytes
     for (int i = 0; i < 8; i++) {
@@ -336,7 +338,7 @@ int htx_connection_init(htx_connection_t *conn,
     }
     
     // Clear connection structure
-    memset(conn, 0, sizeof(htx_connection_t));
+    secure_memset(conn, 0, sizeof(htx_connection_t));
     
     // Set basic properties
     conn->is_server = is_server;
@@ -344,11 +346,11 @@ int htx_connection_init(htx_connection_t *conn,
     
     // Initialize crypto state
     if (is_server) {
-        memcpy(conn->send_crypto.key, k0_server, HTX_AEAD_KEY_SIZE);
-        memcpy(conn->recv_crypto.key, k0_client, HTX_AEAD_KEY_SIZE);
+        secure_memcpy(conn->send_crypto.key, sizeof(conn->send_crypto.key), k0_server, HTX_AEAD_KEY_SIZE);
+        secure_memcpy(conn->recv_crypto.key, sizeof(conn->recv_crypto.key), k0_client, HTX_AEAD_KEY_SIZE);
     } else {
-        memcpy(conn->send_crypto.key, k0_client, HTX_AEAD_KEY_SIZE);
-        memcpy(conn->recv_crypto.key, k0_server, HTX_AEAD_KEY_SIZE);
+        secure_memcpy(conn->send_crypto.key, sizeof(conn->send_crypto.key), k0_client, HTX_AEAD_KEY_SIZE);
+        secure_memcpy(conn->recv_crypto.key, sizeof(conn->recv_crypto.key), k0_server, HTX_AEAD_KEY_SIZE);
     }
     
     // Derive nonce salts
@@ -389,7 +391,7 @@ void htx_connection_cleanup(htx_connection_t *conn) {
     OPENSSL_cleanse(&conn->recv_crypto, sizeof(htx_crypto_state_t));
     
     // Clear connection structure
-    memset(conn, 0, sizeof(htx_connection_t));
+    secure_memset(conn, 0, sizeof(htx_connection_t));
 }
 
 int htx_stream_open(htx_connection_t *conn, uint32_t *stream_id) {
@@ -510,7 +512,7 @@ int htx_frame_encode_stream(htx_connection_t *conn,
     wire_ptr += varint_len;
     
     // Ciphertext + tag
-    memcpy(wire_ptr, ciphertext, ciphertext_len);
+    secure_memcpy(wire_ptr, sizeof(wire_ptr), ciphertext, ciphertext_len);
     wire_ptr += ciphertext_len;
     
     result->wire_len = wire_ptr - result->wire_data;
@@ -540,7 +542,7 @@ int htx_frame_encode_ping(htx_connection_t *conn,
     // Ping payload (8 bytes of timestamp or random data)
     uint8_t payload[8];
     if (ping_data) {
-        memcpy(payload, ping_data, 8);
+        secure_memcpy(payload, sizeof(payload), ping_data, 8);
     } else {
         // Use current timestamp as ping data
         uint64_t timestamp = (uint64_t)time(NULL);
@@ -577,7 +579,7 @@ int htx_frame_encode_ping(htx_connection_t *conn,
     *wire_ptr++ = HTX_FRAME_PING;
     
     // Ciphertext + tag
-    memcpy(wire_ptr, ciphertext, ciphertext_len);
+    secure_memcpy(wire_ptr, sizeof(wire_ptr), ciphertext, ciphertext_len);
     wire_ptr += ciphertext_len;
     
     result->wire_len = wire_ptr - result->wire_data;
@@ -640,7 +642,7 @@ int htx_frame_encode_close(htx_connection_t *conn,
     }
     
     // Ciphertext + tag
-    memcpy(wire_ptr, ciphertext, ciphertext_len);
+    secure_memcpy(wire_ptr, sizeof(wire_ptr), ciphertext, ciphertext_len);
     wire_ptr += ciphertext_len;
     
     result->wire_len = wire_ptr - result->wire_data;
@@ -693,7 +695,7 @@ int htx_frame_encode_key_update(htx_connection_t *conn,
     *wire_ptr++ = HTX_FRAME_KEY_UPDATE;
     
     // Ciphertext + tag
-    memcpy(wire_ptr, ciphertext, ciphertext_len);
+    secure_memcpy(wire_ptr, sizeof(wire_ptr), ciphertext, ciphertext_len);
     wire_ptr += ciphertext_len;
     
     result->wire_len = wire_ptr - result->wire_data;
@@ -753,7 +755,7 @@ int htx_frame_encode_window_update(htx_connection_t *conn,
     wire_ptr += varint_len;
     
     // Ciphertext + tag
-    memcpy(wire_ptr, ciphertext, ciphertext_len);
+    secure_memcpy(wire_ptr, sizeof(wire_ptr), ciphertext, ciphertext_len);
     wire_ptr += ciphertext_len;
     
     result->wire_len = wire_ptr - result->wire_data;
@@ -812,8 +814,8 @@ int htx_crypto_rekey(htx_connection_t *conn,
     if (err != HTX_OK) return err;
     
     // Update keys and reset state
-    memcpy(conn->send_crypto.key, new_send_key, HTX_AEAD_KEY_SIZE);
-    memcpy(conn->recv_crypto.key, new_recv_key, HTX_AEAD_KEY_SIZE);
+    secure_memcpy(conn->send_crypto.key, sizeof(conn->send_crypto.key), new_send_key, HTX_AEAD_KEY_SIZE);
+    secure_memcpy(conn->recv_crypto.key, sizeof(conn->recv_crypto.key), new_recv_key, HTX_AEAD_KEY_SIZE);
     
     // Derive new nonce salts
     err = derive_nonce_salt(conn->send_crypto.key, conn->send_crypto.nonce_salt);
@@ -846,8 +848,7 @@ int htx_connection_get_stats(const htx_connection_t *conn,
     }
     
     time_t now = time(NULL);
-    int written = snprintf(stats_json, json_len,
-        "{"
+    int written = secure_snprintf(stats_json, json_len, "{"
         "\"uptime_seconds\":%ld,"
         "\"is_server\":%s,"
         "\"frames_sent\":%llu,"
@@ -893,12 +894,11 @@ int htx_frame_decode(htx_connection_t *conn,
     }
     
     // Initialize result
-    memset(result, 0, sizeof(htx_frame_decode_result_t));
+    secure_memset(result, 0, sizeof(htx_frame_decode_result_t));
     
     // Minimum frame size: 3 (length) + 1 (type) + 16 (tag) = 20 bytes
     if (wire_len < 20) {
-        snprintf(result->error_message, sizeof(result->error_message),
-                "Frame too short: %zu bytes", wire_len);
+        secure_snprintf(result->error_message, sizeof(result->error_message), "Frame too short: %zu bytes", wire_len);
         return HTX_ERROR_INVALID_DATA;
     }
     
@@ -916,8 +916,7 @@ int htx_frame_decode(htx_connection_t *conn,
     
     // Validate frame type
     if (frame_type > HTX_FRAME_WINDOW_UPDATE) {
-        snprintf(result->error_message, sizeof(result->error_message),
-                "Invalid frame type: %u", frame_type);
+        secure_snprintf(result->error_message, sizeof(result->error_message), "Invalid frame type: %u", frame_type);
         return HTX_ERROR_INVALID_DATA;
     }
     
@@ -929,8 +928,7 @@ int htx_frame_decode(htx_connection_t *conn,
         uint32_t stream_id;
         size_t varint_consumed = decode_varint(wire_ptr, remaining, &stream_id);
         if (varint_consumed == 0) {
-            snprintf(result->error_message, sizeof(result->error_message),
-                    "Invalid stream ID varint");
+            secure_snprintf(result->error_message, sizeof(result->error_message), "Invalid stream ID varint");
             return HTX_ERROR_INVALID_DATA;
         }
         
@@ -942,8 +940,7 @@ int htx_frame_decode(htx_connection_t *conn,
     
     // Validate ciphertext length
     if (remaining != ciphertext_len) {
-        snprintf(result->error_message, sizeof(result->error_message),
-                "Ciphertext length mismatch: expected %u, got %zu", 
+        secure_snprintf(result->error_message, sizeof(result->error_message), "Ciphertext length mismatch: expected %u, got %zu", 
                 ciphertext_len, remaining);
         return HTX_ERROR_INVALID_DATA;
     }
@@ -958,8 +955,7 @@ int htx_frame_decode(htx_connection_t *conn,
                                                result->frame.plaintext, &result->frame.plaintext_len);
     if (err != HTX_OK) {
         free(result->frame.plaintext);
-        snprintf(result->error_message, sizeof(result->error_message),
-                "Decryption failed");
+        secure_snprintf(result->error_message, sizeof(result->error_message), "Decryption failed");
         return err;
     }
     
@@ -1029,7 +1025,7 @@ bool htx_stream_id_valid(uint32_t stream_id, bool is_client) {
 htx_frame_encode_result_t *htx_frame_encode_result_alloc(size_t max_size) {
     htx_frame_encode_result_t *result = malloc(sizeof(htx_frame_encode_result_t));
     if (result) {
-        memset(result, 0, sizeof(htx_frame_encode_result_t));
+        secure_memset(result, 0, sizeof(htx_frame_encode_result_t));
     }
     return result;
 }
@@ -1052,6 +1048,6 @@ void htx_frame_decode_result_free(htx_frame_decode_result_t *result) {
         if (result->frame.ciphertext) {
             free(result->frame.ciphertext);
         }
-        memset(result, 0, sizeof(htx_frame_decode_result_t));
+        secure_memset(result, 0, sizeof(htx_frame_decode_result_t));
     }
 }

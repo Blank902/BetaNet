@@ -1,6 +1,8 @@
 C:/Users/xxlmn/Documents/BetaNet/CMakeFiles/RUN_TESTS.dir
 C:/Users/xxlmn/Documents/BetaNet/CMakeFiles/ALL_BUILD.dir
 C:/Users/xxlmn/Documents/BetaNet/CMakeFiles/ZERO_CHECK.dir
+C:/Users/xxlmn/Documents/BetaNet/src/gov/CMakeFiles/gov_protocol.dir
+C:/Users/xxlmn/Documents/BetaNet/src/gov/CMakeFiles/RUN_TESTS.dir
 C:/Users/xxlmn/Documents/BetaNet/libbetanetc/CMakeFiles/betanetc.dir
 C:/Users/xxlmn/Documents/BetaNet/libbetanetc/CMakeFiles/RUN_TESTS.dir
 C:/Users/xxlmn/Documents/BetaNet/cli/bnetc-cli/CMakeFiles/bnetc-cli.dir
@@ -8,7 +10,15 @@ C:/Users/xxlmn/Documents/BetaNet/cli/bnetc-cli/CMakeFiles/RUN_TESTS.dir
 C:/Users/xxlmn/Documents/BetaNet/tests/unit/CMakeFiles/fingerprint_regression_test.dir
 C:/Users/xxlmn/Documents/BetaNet/tests/unit/CMakeFiles/protocol_regression_test.dir
 C:/Users/xxlmn/Documents/BetaNet/tests/unit/CMakeFiles/test_scion_basic.dir
+C:/Users/xxlmn/Documents/BetaNet/tests/unit/CMakeFiles/test_htx_transport.dir
+C:/Users/xxlmn/Documents/BetaNet/tests/unit/CMakeFiles/test_htx_calibration.dir
 C:/Users/xxlmn/Documents/BetaNet/tests/unit/CMakeFiles/ticket_parser_fuzz.dir
+C:/Users/xxlmn/Documents/BetaNet/tests/unit/CMakeFiles/test_gov_protocol.dir
+C:/Users/xxlmn/Documents/BetaNet/tests/unit/CMakeFiles/test_htx_calibration_simple.dir
+C:/Users/xxlmn/Documents/BetaNet/tests/unit/CMakeFiles/test_minimal.dir
+C:/Users/xxlmn/Documents/BetaNet/tests/unit/CMakeFiles/test_htx_calibration_mock.dir
+C:/Users/xxlmn/Documents/BetaNet/tests/unit/CMakeFiles/test_path_optimization.dir
+C:/Users/xxlmn/Documents/BetaNet/tests/unit/CMakeFiles/http2_emulation_test.dir
 C:/Users/xxlmn/Documents/BetaNet/tests/unit/CMakeFiles/RUN_TESTS.dir
 C:/Users/xxlmn/Documents/BetaNet/tests/interop/CMakeFiles/interop_protocol_test.dir
 C:/Users/xxlmn/Documents/BetaNet/tests/interop/CMakeFiles/RUN_TESTS.dir
@@ -20,6 +30,8 @@ C:/Users/xxlmn/Documents/BetaNet/tests/integration/CMakeFiles/scion_test.dir
 C:/Users/xxlmn/Documents/BetaNet/tests/integration/CMakeFiles/htx_tickets_test.dir
 C:/Users/xxlmn/Documents/BetaNet/tests/integration/CMakeFiles/htx_frames_test.dir
 C:/Users/xxlmn/Documents/BetaNet/tests/integration/CMakeFiles/htx_noise_integration_test.dir
+C:/Users/xxlmn/Documents/BetaNet/tests/integration/CMakeFiles/integration_path_htx.dir
+C:/Users/xxlmn/Documents/BetaNet/tests/integration/CMakeFiles/htx_http2_integration_test.dir
 C:/Users/xxlmn/Documents/BetaNet/tests/integration/CMakeFiles/RUN_TESTS.dir
 C:/Users/xxlmn/Documents/BetaNet/tests/performance/CMakeFiles/htx_noise_performance_test.dir
 C:/Users/xxlmn/Documents/BetaNet/tests/performance/CMakeFiles/RUN_TESTS.dir

@@ -189,6 +189,10 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
       <Project>{1DC94C84-C8D3-3D22-BF27-AC8631FD2451}</Project>
       <Name>fingerprint_regression_test</Name>
     </ProjectReference>
+    <ProjectReference Include="C:\Users\xxlmn\Documents\BetaNet\build\src\gov\gov_protocol.vcxproj">
+      <Project>{9EBFFB89-FF3B-3E49-9511-AE1E34785A5D}</Project>
+      <Name>gov_protocol</Name>
+    </ProjectReference>
     <ProjectReference Include="C:\Users\xxlmn\Documents\BetaNet\build\tests\integration\htx_frames_test.vcxproj">
       <Project>{EA490CD0-F6B0-3AB2-AF32-F4116FB66317}</Project>
       <Name>htx_frames_test</Name>
@@ -204,6 +208,10 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     <ProjectReference Include="C:\Users\xxlmn\Documents\BetaNet\build\tests\integration\htx_tickets_test.vcxproj">
       <Project>{394B631C-A87E-322F-9B44-3AA969614B0D}</Project>
       <Name>htx_tickets_test</Name>
+    </ProjectReference>
+    <ProjectReference Include="C:\Users\xxlmn\Documents\BetaNet\build\tests\integration\integration_path_htx.vcxproj">
+      <Project>{DE855364-5BF3-385C-8609-09662A135935}</Project>
+      <Name>integration_path_htx</Name>
     </ProjectReference>
     <ProjectReference Include="C:\Users\xxlmn\Documents\BetaNet\build\tests\interop\interop_protocol_test.vcxproj">
       <Project>{C1D54136-02F6-32CA-AFDF-BD6C88969547}</Project>
@@ -224,6 +232,34 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     <ProjectReference Include="C:\Users\xxlmn\Documents\BetaNet\build\tests\integration\scion_test.vcxproj">
       <Project>{CF4FD298-8700-31BE-A2BD-B12C53CFF470}</Project>
       <Name>scion_test</Name>
+    </ProjectReference>
+    <ProjectReference Include="C:\Users\xxlmn\Documents\BetaNet\build\tests\unit\test_gov_protocol.vcxproj">
+      <Project>{5820309A-59E9-3E57-BBFE-8065326B7F6C}</Project>
+      <Name>test_gov_protocol</Name>
+    </ProjectReference>
+    <ProjectReference Include="C:\Users\xxlmn\Documents\BetaNet\build\tests\unit\test_htx_calibration.vcxproj">
+      <Project>{0B30DB7B-6EAB-3290-81C6-E7EF03371EFC}</Project>
+      <Name>test_htx_calibration</Name>
+    </ProjectReference>
+    <ProjectReference Include="C:\Users\xxlmn\Documents\BetaNet\build\tests\unit\test_htx_calibration_mock.vcxproj">
+      <Project>{8B9DD9A7-0B4E-371B-9F2C-DD3366602AC2}</Project>
+      <Name>test_htx_calibration_mock</Name>
+    </ProjectReference>
+    <ProjectReference Include="C:\Users\xxlmn\Documents\BetaNet\build\tests\unit\test_htx_calibration_simple.vcxproj">
+      <Project>{ED6F4FC7-F0EB-3AEF-B9BF-2F6075D26C6C}</Project>
+      <Name>test_htx_calibration_simple</Name>
+    </ProjectReference>
+    <ProjectReference Include="C:\Users\xxlmn\Documents\BetaNet\build\tests\unit\test_htx_transport.vcxproj">
+      <Project>{EE5A2F76-B5A9-30FC-A58D-C3C6B06D1D4B}</Project>
+      <Name>test_htx_transport</Name>
+    </ProjectReference>
+    <ProjectReference Include="C:\Users\xxlmn\Documents\BetaNet\build\tests\unit\test_minimal.vcxproj">
+      <Project>{64EC0508-8A6B-3A90-958C-FFEE4946210B}</Project>
+      <Name>test_minimal</Name>
+    </ProjectReference>
+    <ProjectReference Include="C:\Users\xxlmn\Documents\BetaNet\build\tests\unit\test_path_optimization.vcxproj">
+      <Project>{2876DDA8-37FD-3D96-A902-948C6EC51A37}</Project>
+      <Name>test_path_optimization</Name>
     </ProjectReference>
     <ProjectReference Include="C:\Users\xxlmn\Documents\BetaNet\build\tests\unit\test_scion_basic.vcxproj">
       <Project>{B0A48337-9891-3FD3-B15B-6CB547106413}</Project>

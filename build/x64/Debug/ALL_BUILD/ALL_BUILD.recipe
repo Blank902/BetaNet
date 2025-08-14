@@ -20,7 +20,13 @@
       <FullPath>C:\Users\xxlmn\Documents\BetaNet\build\tests\integration\Debug\htx_noise_integration_test.exe</FullPath>
     </ProjectOutput>
     <ProjectOutput>
+      <FullPath>C:\Users\xxlmn\Documents\BetaNet\build\tests\performance\Debug\htx_noise_performance_test.exe</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
       <FullPath>C:\Users\xxlmn\Documents\BetaNet\build\tests\integration\Debug\htx_tickets_test.exe</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
+      <FullPath>C:\Users\xxlmn\Documents\BetaNet\build\tests\integration\Debug\integration_path_htx.exe</FullPath>
     </ProjectOutput>
     <ProjectOutput>
       <FullPath>C:\Users\xxlmn\Documents\BetaNet\build\tests\interop\Debug\interop_protocol_test.exe</FullPath>
@@ -36,6 +42,30 @@
     </ProjectOutput>
     <ProjectOutput>
       <FullPath>C:\Users\xxlmn\Documents\BetaNet\build\tests\integration\Debug\scion_test.exe</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
+      <FullPath>C:\Users\xxlmn\Documents\BetaNet\build\tests\unit\Debug\test_gov_protocol.exe</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
+      <FullPath>C:\Users\xxlmn\Documents\BetaNet\build\tests\unit\Debug\test_htx_calibration.exe</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
+      <FullPath>C:\Users\xxlmn\Documents\BetaNet\build\tests\unit\Debug\test_htx_calibration_mock.exe</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
+      <FullPath>C:\Users\xxlmn\Documents\BetaNet\build\tests\unit\Debug\test_htx_calibration_simple.exe</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
+      <FullPath>C:\Users\xxlmn\Documents\BetaNet\build\tests\unit\Debug\test_htx_transport.exe</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
+      <FullPath>C:\Users\xxlmn\Documents\BetaNet\build\tests\unit\Debug\test_minimal.exe</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
+      <FullPath>C:\Users\xxlmn\Documents\BetaNet\build\tests\unit\Debug\test_path_optimization.exe</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
+      <FullPath>C:\Users\xxlmn\Documents\BetaNet\build\tests\unit\Debug\test_scion_basic.exe</FullPath>
     </ProjectOutput>
     <ProjectOutput>
       <FullPath>C:\Users\xxlmn\Documents\BetaNet\build\tests\unit\Debug\ticket_parser_fuzz.exe</FullPath>

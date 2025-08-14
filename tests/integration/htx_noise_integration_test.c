@@ -12,6 +12,8 @@
 #include <string.h>
 #include <assert.h>
 #include <time.h>
+#include "../../include/betanet/secure_utils.h"
+#include "../../include/betanet/secure_log.h"
 
 // Test framework macros
 #define TEST_ASSERT(condition, message) \
@@ -109,7 +111,7 @@ bool test_handshake_process() {
     // Initialize result structure
     client_result.success = true;
     client_result.handshake_duration_ms = 100;
-    memcpy(client_result.session_id, "test_session_id_12345", 21);
+    secure_memcpy(client_result.session_id, sizeof(client_result.session_id), "test_session_id_12345", 21);
     
     // Mark handshake as complete manually for testing
     client->handshake_complete = true;
@@ -236,7 +238,7 @@ bool test_message_receiving() {
     received_message.data = malloc(13);
     received_message.data_len = 13;
     received_message.is_final = false;
-    memcpy(received_message.data, "Hello, world!", 13);
+    secure_memcpy(received_message.data, sizeof(received_message.data), "Hello, world!", 13);
     
     // Test the received content
     TEST_ASSERT(received_message.data != NULL, "Received data should not be NULL");
@@ -299,7 +301,7 @@ bool test_request_response() {
     response.data = malloc(4);
     response.data_len = 4;
     response.is_final = false;
-    memcpy(response.data, "pong", 4);
+    secure_memcpy(response.data, sizeof(response.data), "pong", 4);
     
     // Test the simulated response
     TEST_ASSERT(response.data != NULL, "Response data should not be NULL");

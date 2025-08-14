@@ -15,6 +15,8 @@
 #ifdef _WIN32
 #include <windows.h>
 #include <intrin.h>
+#include "../../include/betanet/secure_utils.h"
+#include "../../include/betanet/secure_log.h"
 #endif
 
 // Performance test configuration
@@ -171,7 +173,7 @@ void test_message_throughput(performance_metrics_t *metrics) {
     
     // Prepare test data
     uint8_t *test_data = malloc(PERF_TEST_MESSAGE_SIZE);
-    memset(test_data, 0xAA, PERF_TEST_MESSAGE_SIZE);
+    secure_memset(test_data, 0xAA, PERF_TEST_MESSAGE_SIZE);
     
     htx_noise_message_t message = {
         .stream_id = stream_id,
@@ -356,7 +358,7 @@ void test_concurrent_streams(performance_metrics_t *metrics) {
     
     // Send messages on each stream
     uint8_t test_data[256];
-    memset(test_data, 0xBB, sizeof(test_data));
+    secure_memset(test_data, 0xBB, sizeof(test_data));
     
     for (int i = 0; i < streams_opened; i++) {
         htx_noise_message_t message = {

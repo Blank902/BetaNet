@@ -8,6 +8,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include "betanet/betanet.h"
+#include "../../include/betanet/secure_utils.h"
+#include "../../include/betanet/secure_log.h"
 
 // Stub/mock helpers for legacy/1.0 compatibility
 // Section 6: Outer TLS/HTTP2 ALPN negotiation (legacy 1.0)
@@ -57,9 +59,9 @@ static int test_modern_alpn_and_transition() {
 int test_voucher_handling(void) {
     // Prepare a voucher with known keyset (all zero)
     cashu_voucher_t voucher = {0};
-    memset(voucher.keyset_id, 0x00, 32); // known keyset
-    memset(voucher.secret, 0x11, 32);
-    memset(voucher.aggregated_sig, 0x22, 64);
+    secure_memset(voucher.keyset_id, 0x00, 32); // known keyset
+    secure_memset(voucher.secret, 0x11, 32);
+    secure_memset(voucher.aggregated_sig, 0x22, 64);
     int valid = pay_validate_voucher(&voucher, sizeof(voucher));
     if (valid != 0) {
         printf("[FAIL] Voucher validate (known keyset)\n");
@@ -72,9 +74,9 @@ int test_voucher_handling(void) {
     }
     // Unknown keyset
     cashu_voucher_t bad_voucher = {0};
-    memset(bad_voucher.keyset_id, 0xFF, 32); // unknown keyset
-    memset(bad_voucher.secret, 0x11, 32);
-    memset(bad_voucher.aggregated_sig, 0x22, 64);
+    secure_memset(bad_voucher.keyset_id, 0xFF, 32); // unknown keyset
+    secure_memset(bad_voucher.secret, 0x11, 32);
+    secure_memset(bad_voucher.aggregated_sig, 0x22, 64);
     int bad_valid = pay_validate_voucher(&bad_voucher, sizeof(bad_voucher));
     if (bad_valid == 0) {
         printf("[FAIL] Voucher validate (unknown keyset should fail)\n");

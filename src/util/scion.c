@@ -1,4 +1,6 @@
 #include "betanet/scion.h"
+#include "../../include/betanet/secure_utils.h"
+#include "../../include/betanet/secure_log.h"
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -122,7 +124,7 @@ scion_path_t* scion_path_create(const scion_ia_t* src_ia,
         free(path);
         return NULL;
     }
-    memcpy(path->raw_path, raw_path, path_len);
+    secure_memcpy(path->raw_path, sizeof(path->raw_path), raw_path, path_len);
     path->path_len = path_len;
 
     // Initialize path metadata
@@ -187,7 +189,7 @@ scion_error_t scion_selector_init(scion_selector_t* selector,
         return SCION_ERROR_CONFIG;
     }
 
-    memset(selector, 0, sizeof(scion_selector_t));
+    secure_memset(selector, 0, sizeof(scion_selector_t));
 
     // Use provided config or default
     if (config) {
@@ -407,7 +409,7 @@ int scion_format_ia(const scion_ia_t* ia, char* buffer, size_t buffer_size) {
         return -1;
     }
 
-    return snprintf(buffer, buffer_size, "%llu-%llx", ia->isd, ia->as);
+    return secure_snprintf(buffer, buffer_size, "%llu-%llx", ia->isd, ia->as);
 }
 
 const scion_metrics_t* scion_get_metrics(const scion_selector_t* selector) {
@@ -443,30 +445,30 @@ const scion_metrics_t* scion_get_metrics(const scion_selector_t* selector) {
 void scion_print_metrics(const scion_selector_t* selector) {
     const scion_metrics_t* metrics = scion_get_metrics(selector);
     if (!metrics) {
-        printf("SCION Metrics: Not available\n");
+        BETANET_LOG_INFO(BETANET_LOG_TAG_SCION, "SCION Metrics: Not available\n");
         return;
     }
 
-    printf("\n=== SCION Path Selection Metrics ===\n");
-    printf("Paths discovered: %llu\n", metrics->paths_discovered);
-    printf("Paths selected: %llu\n", metrics->paths_selected);
-    printf("Path switches: %llu\n", metrics->path_switches);
-    printf("Path failures: %llu\n", metrics->path_failures);
-    printf("Average latency: %u ms\n", metrics->avg_latency_ms);
-    printf("Average bandwidth: %u kbps\n", metrics->avg_bandwidth_kbps);
+    BETANET_LOG_INFO(BETANET_LOG_TAG_PATH, "\n=== SCION Path Selection Metrics ===\n");
+    BETANET_LOG_INFO(BETANET_LOG_TAG_PATH, "Paths discovered: %llu\n", metrics->paths_discovered);
+    BETANET_LOG_INFO(BETANET_LOG_TAG_PATH, "Paths selected: %llu\n", metrics->paths_selected);
+    BETANET_LOG_INFO(BETANET_LOG_TAG_PATH, "Path switches: %llu\n", metrics->path_switches);
+    BETANET_LOG_ERROR(BETANET_LOG_TAG_PATH, "Path failures: %llu\n", metrics->path_failures);
+    BETANET_LOG_INFO(BETANET_LOG_TAG_CORE, "Average latency: %u ms\n", metrics->avg_latency_ms);
+    BETANET_LOG_INFO(BETANET_LOG_TAG_CORE, "Average bandwidth: %u kbps\n", metrics->avg_bandwidth_kbps);
     
     if (selector->active_path) {
-        printf("\nActive Path Quality:\n");
-        printf("  Latency: %u ms\n", selector->active_path->quality.latency_ms);
-        printf("  Bandwidth: %u kbps\n", selector->active_path->quality.bandwidth_kbps);
-        printf("  Packet loss: %u (0.%02u%%)\n", 
+        BETANET_LOG_INFO(BETANET_LOG_TAG_PATH, "\nActive Path Quality:\n");
+        BETANET_LOG_INFO(BETANET_LOG_TAG_CORE, "  Latency: %u ms\n", selector->active_path->quality.latency_ms);
+        BETANET_LOG_INFO(BETANET_LOG_TAG_CORE, "  Bandwidth: %u kbps\n", selector->active_path->quality.bandwidth_kbps);
+        BETANET_LOG_INFO(BETANET_LOG_TAG_CORE, "  Packet loss: %u (0.%02u%%)\n", 
                selector->active_path->quality.packet_loss,
                selector->active_path->quality.packet_loss);
-        printf("  Jitter: %u ms\n", selector->active_path->quality.jitter_ms);
+        BETANET_LOG_INFO(BETANET_LOG_TAG_CORE, "  Jitter: %u ms\n", selector->active_path->quality.jitter_ms);
     }
     
-    printf("Last update: %s", ctime(&metrics->last_update));
-    printf("=====================================\n\n");
+    BETANET_LOG_INFO(BETANET_LOG_TAG_CORE, "Last update: %s", ctime(&metrics->last_update));
+    BETANET_LOG_INFO(BETANET_LOG_TAG_CORE, "=====================================\n\n");
 }
 
 void scion_reset_metrics(scion_selector_t* selector) {
@@ -474,7 +476,7 @@ void scion_reset_metrics(scion_selector_t* selector) {
         return;
     }
 
-    memset(selector->metrics, 0, sizeof(scion_metrics_t));
+    secure_memset(selector->metrics, 0, sizeof(scion_metrics_t));
     selector->metrics->last_update = time(NULL);
 }
 
@@ -496,5 +498,5 @@ void scion_selector_cleanup(scion_selector_t* selector) {
         free(selector->metrics);
     }
 
-    memset(selector, 0, sizeof(scion_selector_t));
+    secure_memset(selector, 0, sizeof(scion_selector_t));
 }

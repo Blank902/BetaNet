@@ -18,9 +18,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
+#include "../../include/betanet/secure_utils.h"
 #include <time.h>
 
 #include "../../include/betanet/htx_tickets.h"
+#include "../../include/betanet/secure_log.h"
 
 // Test statistics
 static struct {
@@ -206,16 +208,16 @@ static int test_ticket_verification(void) {
     
     size_t offset = 0;
     binary_data[offset++] = payload.version;
-    memcpy(&binary_data[offset], payload.client_pubkey, HTX_TICKET_PUBKEY_SIZE);
+    secure_memcpy(&binary_data[offset], sizeof(&binary_data[offset]), payload.client_pubkey, HTX_TICKET_PUBKEY_SIZE);
     offset += HTX_TICKET_PUBKEY_SIZE;
-    memcpy(&binary_data[offset], payload.key_id, HTX_TICKET_KEYID_SIZE);
+    secure_memcpy(&binary_data[offset], sizeof(&binary_data[offset]), payload.key_id, HTX_TICKET_KEYID_SIZE);
     offset += HTX_TICKET_KEYID_SIZE;
-    memcpy(&binary_data[offset], payload.nonce, HTX_TICKET_NONCE_SIZE);
+    secure_memcpy(&binary_data[offset], sizeof(&binary_data[offset]), payload.nonce, HTX_TICKET_NONCE_SIZE);
     offset += HTX_TICKET_NONCE_SIZE;
-    memcpy(&binary_data[offset], payload.access_ticket, HTX_TICKET_ACCESS_SIZE);
+    secure_memcpy(&binary_data[offset], sizeof(&binary_data[offset]), payload.access_ticket, HTX_TICKET_ACCESS_SIZE);
     offset += HTX_TICKET_ACCESS_SIZE;
     if (payload.padding_len > 0) {
-        memcpy(&binary_data[offset], payload.padding, payload.padding_len);
+        secure_memcpy(&binary_data[offset], sizeof(&binary_data[offset]), payload.padding, payload.padding_len);
     }
     
     // Verify ticket
@@ -263,16 +265,16 @@ static int test_replay_protection(void) {
     
     size_t offset = 0;
     binary_data[offset++] = payload.version;
-    memcpy(&binary_data[offset], payload.client_pubkey, HTX_TICKET_PUBKEY_SIZE);
+    secure_memcpy(&binary_data[offset], sizeof(&binary_data[offset]), payload.client_pubkey, HTX_TICKET_PUBKEY_SIZE);
     offset += HTX_TICKET_PUBKEY_SIZE;
-    memcpy(&binary_data[offset], payload.key_id, HTX_TICKET_KEYID_SIZE);
+    secure_memcpy(&binary_data[offset], sizeof(&binary_data[offset]), payload.key_id, HTX_TICKET_KEYID_SIZE);
     offset += HTX_TICKET_KEYID_SIZE;
-    memcpy(&binary_data[offset], payload.nonce, HTX_TICKET_NONCE_SIZE);
+    secure_memcpy(&binary_data[offset], sizeof(&binary_data[offset]), payload.nonce, HTX_TICKET_NONCE_SIZE);
     offset += HTX_TICKET_NONCE_SIZE;
-    memcpy(&binary_data[offset], payload.access_ticket, HTX_TICKET_ACCESS_SIZE);
+    secure_memcpy(&binary_data[offset], sizeof(&binary_data[offset]), payload.access_ticket, HTX_TICKET_ACCESS_SIZE);
     offset += HTX_TICKET_ACCESS_SIZE;
     if (payload.padding_len > 0) {
-        memcpy(&binary_data[offset], payload.padding, payload.padding_len);
+        secure_memcpy(&binary_data[offset], sizeof(&binary_data[offset]), payload.padding, payload.padding_len);
     }
     
     // First verification should succeed
@@ -379,7 +381,7 @@ static int test_time_window_validation(void) {
     
     // Test that duplicate checking works across different hours
     uint8_t test_pubkey[HTX_TICKET_PUBKEY_SIZE];
-    memset(test_pubkey, 0x42, HTX_TICKET_PUBKEY_SIZE);
+    secure_memset(test_pubkey, 0x42, HTX_TICKET_PUBKEY_SIZE);
     
     // Should not be duplicate initially
     ASSERT_TRUE(!htx_ticket_is_duplicate(test_pubkey, current_hour), "Should not be duplicate initially");
@@ -446,8 +448,8 @@ static int test_performance_and_security(void) {
         htx_access_ticket_t ticket;
         ASSERT_EQ(htx_ticket_client_generate(&request, &ticket), 0, "Ticket generation failed");
         
-        memcpy(client_pubkeys[i], request.client_pubkey, HTX_TICKET_PUBKEY_SIZE);
-        memcpy(access_tickets[i], ticket.access_ticket, HTX_TICKET_ACCESS_SIZE);
+        secure_memcpy(client_pubkeys[i], sizeof(client_pubkeys[i]), request.client_pubkey, HTX_TICKET_PUBKEY_SIZE);
+        secure_memcpy(access_tickets[i], sizeof(access_tickets[i]), ticket.access_ticket, HTX_TICKET_ACCESS_SIZE);
     }
     
     // Verify all client public keys are different (randomness check)

@@ -8,14 +8,22 @@ add_library(betanetc
     ../include/betanet/scion.h
     ../include/betanet/htx_frames.h
     ../include/betanet/htx_noise_integration.h
+    ../include/betanet/htx_transport.h
+    ../include/betanet/htx_calibration.h
+    ../include/betanet/path_optimization.h
+    ../include/betanet/http2_emulation.h
     ../src/htx/htx.c
     ../src/htx/ticket.c
     ../src/htx/htx_tickets.c
     ../src/htx/htx_frames.c
     ../src/htx/htx_noise_integration.c
+    ../src/htx/htx_transport.c
+    ../src/htx/http2_emulation.c
+    ../src/htx/origin_calibration.c
     ../src/noise/noise.c
     ../src/shape/shape.c
     ../src/path/path.c
+    ../src/path/path_optimization.c
     ../src/path/scion.c
     ../src/boot/boot.c
     ../src/util/util.c
@@ -23,6 +31,7 @@ add_library(betanetc
     ../src/util/performance.c
     ../src/util/scion.c
     ../src/util/secure_utils.c
+    ../src/util/secure_log.c
     ../src/pay/pay.c
 )
 

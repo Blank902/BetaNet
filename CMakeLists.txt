@@ -7,6 +7,9 @@ set(BETANET_QUIC_LIBRARY "" CACHE STRING "QUIC library to use (PICOQUIC, MSQUIC,
 
 set_property(CACHE BETANET_QUIC_LIBRARY PROPERTY STRINGS PICOQUIC MSQUIC QUICHE "")
 
+# Add government protocol source
+add_subdirectory(src/gov)
+
 if(BETANET_ENABLE_QUIC)
     if(NOT BETANET_QUIC_LIBRARY)
         message(FATAL_ERROR "BETANET_ENABLE_QUIC is ON, but BETANET_QUIC_LIBRARY is not set. Please set to one of: PICOQUIC, MSQUIC, QUICHE.")

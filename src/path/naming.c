@@ -1,13 +1,15 @@
 #include "naming.h"
 #include <sodium.h>
 #include <string.h>
+#include "../../include/betanet/secure_utils.h"
+#include "../../include/betanet/secure_log.h"
 
 // Hex encoding for self-certifying ID
 void betanet_id_from_pubkey(const uint8_t pubkey[BETANET_PUBKEY_LEN], char out_hex[BETANET_ID_HEX_LEN + 1]) {
     uint8_t hash[32];
     crypto_hash_sha256(hash, pubkey, BETANET_PUBKEY_LEN);
     for (int i = 0; i < 32; ++i)
-        sprintf(out_hex + 2 * i, "%02x", hash[i]);
+        secure_snprintf(out_hex + 2 * i, sizeof(out_hex + 2 * i), "%02x", hash[i]);
     out_hex[BETANET_ID_HEX_LEN] = 0;
 }
 
@@ -29,8 +31,8 @@ bool betanet_quorum_cert_validate(const betanet_quorum_cert_t *qc, uint64_t requ
     for (size_t i = 0; i < qc->count; ++i) {
         // Verify Ed25519 sig: sigs[i] over ("bn-aa1" || payload_hash || epoch)
         uint8_t msg[32 + 8 + 6] = {0};
-        memcpy(msg, "bn-aa1", 6);
-        memcpy(msg + 6, qc->payload_hash, 32);
+        secure_memcpy(msg, sizeof(msg), "bn-aa1", 6);
+        secure_memcpy(msg + 6, sizeof(msg + 6), qc->payload_hash, 32);
         for (int j = 0; j < 8; ++j)
             msg[38 + j] = (qc->epoch >> (56 - 8 * j)) & 0xFF;
         if (crypto_sign_verify_detached(qc->sigs[i], msg, 46, qc->signers[i]) != 0)

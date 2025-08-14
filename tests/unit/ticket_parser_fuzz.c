@@ -12,17 +12,19 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <time.h>
+#include "../../include/betanet/secure_utils.h"
+#include "../../include/betanet/secure_log.h"
 
 // Helper to generate a valid ticket buffer
 void make_valid_ticket(uint8_t *buf, size_t *len) {
     size_t offset = 0;
     buf[offset++] = 0x01; // version
-    memset(buf + offset, 0xAA, 32); offset += 32; // cliPub32
-    memset(buf + offset, 0xBB, 8);  offset += 8;  // ticketKeyID8
-    memset(buf + offset, 0xCC, 32); offset += 32; // nonce32
-    memset(buf + offset, 0xDD, 32); offset += 32; // accessTicket32
+    secure_memset(buf + offset, 0xAA, 32); offset += 32; // cliPub32
+    secure_memset(buf + offset, 0xBB, 8);  offset += 8;  // ticketKeyID8
+    secure_memset(buf + offset, 0xCC, 32); offset += 32; // nonce32
+    secure_memset(buf + offset, 0xDD, 32); offset += 32; // accessTicket32
     size_t padlen = 32; // valid padding (between 24 and 64)
-    memset(buf + offset, 0x00, padlen); offset += padlen;
+    secure_memset(buf + offset, 0x00, padlen); offset += padlen;
     *len = offset;
 }
 

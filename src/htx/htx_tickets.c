@@ -18,6 +18,7 @@
 
 #include "../../include/betanet/htx_tickets.h"
 #include "../../include/betanet/secure_utils.h"
+#include "../../include/betanet/secure_log.h"
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -196,7 +197,7 @@ int htx_ticket_base64url_decode(const char* input, size_t input_len, uint8_t* ou
     static int table_initialized = 0;
     
     if (!table_initialized) {
-        memset(decode_table, -1, sizeof(decode_table));
+        secure_memset(decode_table, -1, sizeof(decode_table));
         for (int i = 0; i < 64; i++) {
             decode_table[(int)base64url_chars[i]] = i;
         }
@@ -263,7 +264,7 @@ int htx_ticket_parse_policy(const char* policy_str, htx_carrier_policy_t* policy
     if (!policy_str || !policy) return -1;
     
     // Example: "v1; carriers=cookie:0.5,query:0.3,body:0.2; len=24..64"
-    memset(policy, 0, sizeof(htx_carrier_policy_t));
+    secure_memset(policy, 0, sizeof(htx_carrier_policy_t));
     
     // Simple parsing (production would use a proper parser)
     const char* carriers_start = strstr(policy_str, "carriers=");
@@ -289,12 +290,13 @@ int htx_ticket_parse_policy(const char* policy_str, htx_carrier_policy_t* policy
 int htx_ticket_format_policy(const htx_carrier_policy_t* policy, char* output, size_t output_size) {
     if (!policy || !output) return -1;
     
-    int len = snprintf(output, output_size,
-                      "v1; carriers=cookie:%.1f,query:%.1f,body:%.1f; len=%u..%u",
-                      policy->cookie_prob, policy->query_prob, policy->body_prob,
-                      policy->min_len, policy->max_len);
+    // Use secure snprintf with bounds checking and validation
+    int len = secure_snprintf(output, output_size,
+                             "v1; carriers=cookie:%.1f,query:%.1f,body:%.1f; len=%u..%u",
+                             policy->cookie_prob, policy->query_prob, policy->body_prob,
+                             policy->min_len, policy->max_len);
     
-    return (len > 0 && (size_t)len < output_size) ? 0 : -1;
+    return (len == SECURE_ERROR_NONE) ? 0 : -1;
 }
 
 bool htx_ticket_is_duplicate(const uint8_t* client_pubkey, uint64_t hour) {
@@ -353,7 +355,7 @@ int htx_ticket_server_verify(const htx_ticket_server_config_t* config,
         return -1;
     }
     
-    memset(result, 0, sizeof(htx_ticket_verification_t));
+    secure_memset(result, 0, sizeof(htx_ticket_verification_t));
     
     // Parse payload fields in order (version, client_pubkey, key_id, nonce, access_ticket)
     size_t offset = 0;
@@ -486,7 +488,7 @@ int htx_ticket_client_create_request(htx_ticket_request_t* request,
                                    const htx_carrier_policy_t* policy) {
     if (!request || !server_pubkey || !key_id || !policy) return -1;
     
-    memset(request, 0, sizeof(htx_ticket_request_t));
+    secure_memset(request, 0, sizeof(htx_ticket_request_t));
     
     // Generate client X25519 keypair
     if (generate_x25519_keypair(request->client_privkey, request->client_pubkey) != 0) {
@@ -519,7 +521,7 @@ int htx_ticket_client_create_request(htx_ticket_request_t* request,
 int htx_ticket_client_generate(const htx_ticket_request_t* request, htx_access_ticket_t* ticket) {
     if (!request || !ticket) return -1;
     
-    memset(ticket, 0, sizeof(htx_access_ticket_t));
+    secure_memset(ticket, 0, sizeof(htx_access_ticket_t));
     
     // Perform X25519 ECDH
     if (perform_x25519_ecdh(request->client_privkey, request->server_pubkey, ticket->shared_secret) != 0) {
@@ -561,7 +563,7 @@ int htx_ticket_client_encode(const htx_ticket_request_t* request,
                            htx_ticket_payload_t* payload) {
     if (!request || !ticket || !payload || !ticket->is_valid) return -1;
     
-    memset(payload, 0, sizeof(htx_ticket_payload_t));
+    secure_memset(payload, 0, sizeof(htx_ticket_payload_t));
     
     // Set version
     payload->version = 0x01;
@@ -651,13 +653,13 @@ int htx_ticket_format_cookie(const htx_ticket_payload_t* payload,
         return -1;
     }
     
-    // Format cookie header
-    int len = snprintf(output, output_size, "Cookie: __Host-%s=%s", site_name, encoded);
+    // Format cookie header with secure formatting
+    int len = secure_snprintf(output, output_size, "Cookie: __Host-%s=%s", site_name, encoded);
     
     free(binary_data);
     free(encoded);
     
-    return (len > 0 && (size_t)len < output_size) ? 0 : -1;
+    return (len == SECURE_ERROR_NONE) ? 0 : -1;
 }
 
 int htx_ticket_format_query(const htx_ticket_payload_t* payload, char* output, size_t output_size) {
@@ -710,12 +712,12 @@ int htx_ticket_format_query(const htx_ticket_payload_t* payload, char* output, s
         return -1;
     }
     
-    int len = snprintf(output, output_size, "bn1=%s", encoded);
+    int len = secure_snprintf(output, output_size, "bn1=%s", encoded);
     
     free(binary_data);
     free(encoded);
     
-    return (len > 0 && (size_t)len < output_size) ? 0 : -1;
+    return (len == SECURE_ERROR_NONE) ? 0 : -1;
 }
 
 int htx_ticket_format_body(const htx_ticket_payload_t* payload, char* output, size_t output_size) {
@@ -732,15 +734,15 @@ void htx_ticket_payload_free(htx_ticket_payload_t* payload) {
 }
 
 void htx_ticket_print_stats(void) {
-    printf("=== HTX Ticket Statistics ===\n");
-    printf("Tickets Generated: %llu\n", (unsigned long long)ticket_stats.tickets_generated);
-    printf("Tickets Verified:  %llu\n", (unsigned long long)ticket_stats.tickets_verified);
-    printf("Tickets Rejected:  %llu\n", (unsigned long long)ticket_stats.tickets_rejected);
-    printf("Replay Attempts:   %llu\n", (unsigned long long)ticket_stats.replay_attempts);
-    printf("Carrier Usage:\n");
-    printf("  Cookie: %llu\n", (unsigned long long)ticket_stats.carrier_usage[HTX_CARRIER_COOKIE]);
-    printf("  Query:  %llu\n", (unsigned long long)ticket_stats.carrier_usage[HTX_CARRIER_QUERY]);
-    printf("  Body:   %llu\n", (unsigned long long)ticket_stats.carrier_usage[HTX_CARRIER_BODY]);
-    printf("Active Replay Entries: %zu\n", replay_tracker_count);
-    printf("==============================\n");
+    BETANET_LOG_INFO(BETANET_LOG_TAG_TICKET, "=== HTX Ticket Statistics ===");
+    BETANET_LOG_INFO(BETANET_LOG_TAG_TICKET, "Tickets Generated: %llu", (unsigned long long)ticket_stats.tickets_generated);
+    BETANET_LOG_INFO(BETANET_LOG_TAG_TICKET, "Tickets Verified:  %llu", (unsigned long long)ticket_stats.tickets_verified);
+    BETANET_LOG_INFO(BETANET_LOG_TAG_TICKET, "Tickets Rejected:  %llu", (unsigned long long)ticket_stats.tickets_rejected);
+    BETANET_LOG_INFO(BETANET_LOG_TAG_TICKET, "Replay Attempts:   %llu", (unsigned long long)ticket_stats.replay_attempts);
+    BETANET_LOG_INFO(BETANET_LOG_TAG_TICKET, "Carrier Usage:");
+    BETANET_LOG_INFO(BETANET_LOG_TAG_TICKET, "  Cookie: %llu", (unsigned long long)ticket_stats.carrier_usage[HTX_CARRIER_COOKIE]);
+    BETANET_LOG_INFO(BETANET_LOG_TAG_TICKET, "  Query:  %llu", (unsigned long long)ticket_stats.carrier_usage[HTX_CARRIER_QUERY]);
+    BETANET_LOG_INFO(BETANET_LOG_TAG_TICKET, "  Body:   %llu", (unsigned long long)ticket_stats.carrier_usage[HTX_CARRIER_BODY]);
+    BETANET_LOG_INFO(BETANET_LOG_TAG_TICKET, "Active Replay Entries: %zu", replay_tracker_count);
+    BETANET_LOG_INFO(BETANET_LOG_TAG_TICKET, "==============================");
 }

@@ -10,6 +10,8 @@
 #include "../src/util/platform.h"
 #include "../src/util/performance.h"
 #include "betanet/scion.h"
+#include "../include/betanet/secure_utils.h"
+#include "../include/betanet/secure_log.h"
 
 // Forward declarations
 int betanet_performance_init(void);
@@ -25,9 +27,9 @@ void betanet_init(void) {
     
     // Initialize performance optimizations
     if (betanet_performance_init() != 0) {
-        printf("[betanet] Warning: Performance optimizations initialization failed\n");
+        BETANET_LOG_ERROR(BETANET_LOG_TAG_PERF, "[betanet] Warning: Performance optimizations initialization failed\n");
     } else {
-        printf("[betanet] Performance optimizations enabled\n");
+        BETANET_LOG_INFO(BETANET_LOG_TAG_PERF, "[betanet] Performance optimizations enabled\n");
     }
     
     // Initialize SCION path selector for advanced routing
@@ -37,9 +39,9 @@ void betanet_init(void) {
     
     if (scion_selector_init(&g_scion_selector, &scion_config) == SCION_SUCCESS) {
         g_scion_initialized = true;
-        printf("[betanet] SCION advanced routing enabled\n");
+        BETANET_LOG_INFO(BETANET_LOG_TAG_SCION, "[betanet] SCION advanced routing enabled\n");
     } else {
-        printf("[betanet] Warning: SCION routing initialization failed\n");
+        BETANET_LOG_ERROR(BETANET_LOG_TAG_SCION, "[betanet] Warning: SCION routing initialization failed\n");
         g_scion_initialized = false;
     }
 }
@@ -49,7 +51,7 @@ void betanet_shutdown(void) {
     if (g_scion_initialized) {
         scion_selector_cleanup(&g_scion_selector);
         g_scion_initialized = false;
-        printf("[betanet] SCION routing shutdown complete\n");
+        BETANET_LOG_INFO(BETANET_LOG_TAG_SCION, "[betanet] SCION routing shutdown complete\n");
     }
     
     // Shutdown performance optimizations
@@ -121,13 +123,13 @@ int betanet_connect_with_ticket(htx_ctx_t* ctx, const char* host, uint16_t port,
             // Select optimal path based on configured criteria
             scion_error_t selection_result = scion_select_path(&g_scion_selector, &dst_ia, &selected_path);
             if (selection_result == SCION_SUCCESS && selected_path) {
-                printf("[betanet] SCION path selected - Latency: %ums, Bandwidth: %ukbps\n",
+                BETANET_LOG_INFO(BETANET_LOG_TAG_PATH, "[betanet] SCION path selected - Latency: %ums, Bandwidth: %ukbps\n",
                        selected_path->quality.latency_ms, selected_path->quality.bandwidth_kbps);
             } else {
-                printf("[betanet] SCION path selection failed, using default routing\n");
+                BETANET_LOG_ERROR(BETANET_LOG_TAG_PATH, "[betanet] SCION path selection failed, using default routing\n");
             }
         } else {
-            printf("[betanet] SCION path discovery failed, using default routing\n");
+            BETANET_LOG_ERROR(BETANET_LOG_TAG_PATH, "[betanet] SCION path discovery failed, using default routing\n");
         }
     }
     
@@ -135,17 +137,17 @@ int betanet_connect_with_ticket(htx_ctx_t* ctx, const char* host, uint16_t port,
     if (ticket_str) {
         htx_ticket_t ticket;
         if (htx_ticket_parse(ticket_str, &ticket) != 0) {
-            printf("[betanet] Ticket parsing failed, proceeding without ticket\n");
+            BETANET_LOG_ERROR(BETANET_LOG_TAG_TICKET, "[betanet] Ticket parsing failed, proceeding without ticket\n");
         } else if (!htx_ticket_validate(&ticket)) {
-            printf("[betanet] Ticket validation failed, proceeding without ticket\n");
+            BETANET_LOG_ERROR(BETANET_LOG_TAG_TICKET, "[betanet] Ticket validation failed, proceeding without ticket\n");
         } else if (htx_ticket_check_replay(&ticket) != 0) {
-            printf("[betanet] Ticket replay check failed, proceeding without ticket\n");
+            BETANET_LOG_ERROR(BETANET_LOG_TAG_TICKET, "[betanet] Ticket replay check failed, proceeding without ticket\n");
         } else {
-            printf("[betanet] Ticket validated successfully\n");
+            BETANET_LOG_INFO(BETANET_LOG_TAG_TICKET, "[betanet] Ticket validated successfully\n");
         }
     }
     
-    printf("[betanet] Connecting to %s:%u with SCION routing and performance optimizations\n", 
+    BETANET_LOG_INFO(BETANET_LOG_TAG_SCION, "[betanet] Connecting to %s:%u with SCION routing and performance optimizations\n", 
            host ? host : "localhost", port);
     
     // Try to get a connection from the pool first
@@ -157,7 +159,7 @@ int betanet_connect_with_ticket(htx_ctx_t* ctx, const char* host, uint16_t port,
         strncpy(ctx->alpn_selected, pooled_ctx->alpn_selected, sizeof(ctx->alpn_selected));
         ctx->state = pooled_ctx->state;
         
-        printf("[betanet] Using pooled connection to %s:%u\n", host ? host : "localhost", port);
+        BETANET_LOG_INFO(BETANET_LOG_TAG_CORE, "[betanet] Using pooled connection to %s:%u\n", host ? host : "localhost", port);
         
         // Record successful connection reuse
         time_t duration = get_current_time_ms() - start_time;
@@ -169,7 +171,7 @@ int betanet_connect_with_ticket(htx_ctx_t* ctx, const char* host, uint16_t port,
     int result = betanet_retry_connection(ctx, host, port, HTX_ALPN_HTTP2, 2);
     
     if (result == 0) {
-        printf("[betanet] Successfully connected to %s:%u\n", host ? host : "localhost", port);
+        BETANET_LOG_INFO(BETANET_LOG_TAG_CORE, "[betanet] Successfully connected to %s:%u\n", host ? host : "localhost", port);
         time_t duration = get_current_time_ms() - start_time;
         betanet_metrics_record_connection(true, (double)duration);
         
@@ -179,12 +181,12 @@ int betanet_connect_with_ticket(htx_ctx_t* ctx, const char* host, uint16_t port,
             quality_update.latency_ms = (uint32_t)duration; // Use actual connection time
             quality_update.is_active = true;
             scion_update_path_quality(selected_path, &quality_update);
-            printf("[betanet] Updated SCION path quality metrics\n");
+            BETANET_LOG_INFO(BETANET_LOG_TAG_PATH, "[betanet] Updated SCION path quality metrics\n");
         }
         
         return 0;
     } else {
-        printf("[betanet] Connection failed, falling back to demo mode\n");
+        BETANET_LOG_ERROR(BETANET_LOG_TAG_CORE, "[betanet] Connection failed, falling back to demo mode\n");
         
         // Update SCION path quality with failure information
         if (selected_path && g_scion_initialized) {
@@ -212,7 +214,7 @@ int betanet_accept_with_ticket(htx_ctx_t* ctx, const char* ticket_str) {
     (void)ticket_str; // Ignore ticket for demo
     if (!ctx) return -1;
     
-    printf("[betanet] Demo mode: simulating server accept\n");
+    BETANET_LOG_INFO(BETANET_LOG_TAG_CORE, "[betanet] Demo mode: simulating server accept\n");
     ctx->is_connected = 1; // Mark as connected for demo
     return 0; // Success
 }
@@ -248,11 +250,11 @@ int betanet_secure_handshake_initiator(noise_channel_t* chan, htx_ctx_t* htx) {
     
     // Use real handshake if we have a real SSL connection
     if (htx->state.tcp.ssl && htx->state.tcp.sockfd != -1) {
-        printf("[betanet] Performing real Noise XK handshake as initiator\n");
+        BETANET_LOG_INFO(BETANET_LOG_TAG_NOISE, "[betanet] Performing real Noise XK handshake as initiator\n");
         return noise_channel_handshake_initiator(chan, htx);
     } else {
         // Demo mode: simulate successful handshake
-        printf("[betanet] Demo mode: simulating initiator handshake\n");
+        BETANET_LOG_INFO(BETANET_LOG_TAG_CORE, "[betanet] Demo mode: simulating initiator handshake\n");
         return 0; // Success
     }
 }
@@ -262,11 +264,11 @@ int betanet_secure_handshake_responder(noise_channel_t* chan, htx_ctx_t* htx) {
     
     // Use real handshake if we have a real SSL connection
     if (htx->state.tcp.ssl && htx->state.tcp.sockfd != -1) {
-        printf("[betanet] Performing real Noise XK handshake as responder\n");
+        BETANET_LOG_INFO(BETANET_LOG_TAG_NOISE, "[betanet] Performing real Noise XK handshake as responder\n");
         return noise_channel_handshake_responder(chan, htx);
     } else {
         // Demo mode: simulate successful handshake
-        printf("[betanet] Demo mode: simulating responder handshake\n");
+        BETANET_LOG_INFO(BETANET_LOG_TAG_CORE, "[betanet] Demo mode: simulating responder handshake\n");
         return 0; // Success
     }
 }
@@ -276,7 +278,7 @@ int betanet_secure_send(noise_channel_t* chan, const uint8_t* msg, size_t msg_le
     
     // Use real secure send if handshake is complete
     if (chan->handshake_complete && chan->htx && chan->htx->state.tcp.ssl) {
-        printf("[betanet] Sending %zu bytes over secure channel\n", msg_len);
+        BETANET_LOG_INFO(BETANET_LOG_TAG_CORE, "[betanet] Sending %zu bytes over secure channel\n", msg_len);
         int result = noise_channel_send(chan, msg, msg_len);
         
         // Record transfer metrics
@@ -287,7 +289,7 @@ int betanet_secure_send(noise_channel_t* chan, const uint8_t* msg, size_t msg_le
         return result;
     } else {
         // Demo mode: simulate successful send
-        printf("[betanet] Demo mode: sending %zu bytes\n", msg_len);
+        BETANET_LOG_INFO(BETANET_LOG_TAG_CORE, "[betanet] Demo mode: sending %zu bytes\n", msg_len);
         betanet_metrics_record_transfer(msg_len, 0);
         return 0; // Success
     }
@@ -298,7 +300,7 @@ int betanet_secure_recv(noise_channel_t* chan, uint8_t* out, size_t max_len, siz
     
     // Use real secure recv if handshake is complete
     if (chan->handshake_complete && chan->htx && chan->htx->state.tcp.ssl) {
-        printf("[betanet] Receiving data over secure channel\n");
+        BETANET_LOG_INFO(BETANET_LOG_TAG_CORE, "[betanet] Receiving data over secure channel\n");
         int result = noise_channel_recv(chan, out, max_len, out_len);
         
         // Record transfer metrics
@@ -309,12 +311,12 @@ int betanet_secure_recv(noise_channel_t* chan, uint8_t* out, size_t max_len, siz
         return result;
     } else {
         // Demo mode: simulate receiving a message
-        printf("[betanet] Demo mode: receiving data\n");
+        BETANET_LOG_INFO(BETANET_LOG_TAG_CORE, "[betanet] Demo mode: receiving data\n");
         // Simulate receiving "ACK" message
         const char* demo_msg = "ACK";
         size_t demo_len = strlen(demo_msg);
         if (demo_len > max_len) demo_len = max_len;
-        memcpy(out, demo_msg, demo_len);
+        secure_memcpy(out, sizeof(out), demo_msg, demo_len);
         *out_len = demo_len;
         betanet_metrics_record_transfer(0, demo_len);
         return 0; // Success
@@ -340,7 +342,7 @@ int betanet_scion_discover_paths(const char* dst_ia_str, uint32_t timeout_ms) {
     
     scion_ia_t dst_ia;
     if (scion_parse_ia(dst_ia_str, &dst_ia) != SCION_SUCCESS) {
-        printf("[betanet] Invalid SCION IA format: %s\n", dst_ia_str);
+        BETANET_LOG_INFO(BETANET_LOG_TAG_SCION, "[betanet] Invalid SCION IA format: %s\n", dst_ia_str);
         return -1;
     }
     
@@ -365,7 +367,7 @@ void betanet_scion_print_metrics(void) {
     if (g_scion_initialized) {
         scion_print_metrics(&g_scion_selector);
     } else {
-        printf("SCION routing not initialized\n");
+        BETANET_LOG_INFO(BETANET_LOG_TAG_SCION, "SCION routing not initialized\n");
     }
 }
 
@@ -375,7 +377,7 @@ int betanet_scion_set_selection_criteria(scion_selection_criteria_t criteria) {
     }
     
     g_scion_selector.config.criteria = criteria;
-    printf("[betanet] SCION selection criteria updated\n");
+    BETANET_LOG_INFO(BETANET_LOG_TAG_SCION, "[betanet] SCION selection criteria updated\n");
     return 0;
 }
 
@@ -386,7 +388,7 @@ int betanet_scion_monitor_paths(void) {
     
     scion_error_t result = scion_monitor_and_switch(&g_scion_selector);
     if (result == 1) {
-        printf("[betanet] SCION path switched for better performance\n");
+        BETANET_LOG_INFO(BETANET_LOG_TAG_PATH, "[betanet] SCION path switched for better performance\n");
         return 1; // Path switched
     } else if (result == SCION_SUCCESS) {
         return 0; // No switch needed

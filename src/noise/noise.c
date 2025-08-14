@@ -68,6 +68,7 @@
 
 #ifdef BETANET_ENABLE_PQ_HYBRID
 #include "kyber768.h" // You must provide this header and link the Kyber768 C implementation
+#include "../../include/betanet/secure_log.h"
 
 // TODO: Initialize Kyber768 library if required (e.g., PQClean/liboqs setup)
 // void noise_kyber768_init(void) { /* Call PQClean/liboqs init if needed */ }
@@ -98,21 +99,21 @@ static int noise_kyber768_decaps(const uint8_t *ct, const uint8_t *sk, uint8_t *
 static int noise_kyber768_keypair(uint8_t *pk, uint8_t *sk) { 
     (void)pk; (void)sk; 
     // Fill with deterministic data for testing
-    memset(pk, 0xAA, KYBER_PUBLICKEYBYTES);
-    memset(sk, 0xBB, KYBER_SECRETKEYBYTES);
+    secure_memset(pk, 0xAA, KYBER_PUBLICKEYBYTES);
+    secure_memset(sk, 0xBB, KYBER_SECRETKEYBYTES);
     return 0; 
 }
 static int noise_kyber768_encaps(const uint8_t *pk, uint8_t *ct, uint8_t *ss) { 
     (void)pk; 
     // Fill with deterministic data for testing
-    memset(ct, 0xCC, KYBER_CIPHERTEXTBYTES);
-    memset(ss, 0xDD, KYBER_SHAREDKEYBYTES);
+    secure_memset(ct, 0xCC, KYBER_CIPHERTEXTBYTES);
+    secure_memset(ss, 0xDD, KYBER_SHAREDKEYBYTES);
     return 0; 
 }
 static int noise_kyber768_decaps(const uint8_t *ct, const uint8_t *sk, uint8_t *ss) { 
     (void)ct; (void)sk; 
     // Fill with deterministic data for testing
-    memset(ss, 0xDD, KYBER_SHAREDKEYBYTES);
+    secure_memset(ss, 0xDD, KYBER_SHAREDKEYBYTES);
     return 0; 
 }
 #endif
@@ -273,7 +274,7 @@ static void hkdf_sha256(const uint8_t *ck, const uint8_t *input, size_t input_le
  */
 int noise_channel_handshake_initiator(noise_channel_t* chan, htx_ctx_t* htx) {
     if (!chan || !htx) return -1;
-    memset(chan, 0, sizeof(*chan));
+    secure_memset(chan, 0, sizeof(*chan));
     chan->htx = htx;
 
     // Generate X25519 ephemeral keypair
@@ -338,7 +339,7 @@ int noise_channel_handshake_initiator(noise_channel_t* chan, htx_ctx_t* htx) {
  */
 int noise_channel_handshake_responder(noise_channel_t* chan, htx_ctx_t* htx) {
     if (!chan || !htx) return -1;
-    memset(chan, 0, sizeof(*chan));
+    secure_memset(chan, 0, sizeof(*chan));
     chan->htx = htx;
 
     // Generate ephemeral keypair (X25519)

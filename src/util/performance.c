@@ -1,6 +1,7 @@
 #include "performance.h"
 #include "../htx/htx.h"
 #include "platform.h"
+#include "../../include/betanet/secure_log.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -15,6 +16,8 @@
 #include <sys/time.h>
 #include <errno.h>
 #include <unistd.h>
+#include "../../include/betanet/secure_utils.h"
+#include "../../include/betanet/secure_log.h"
 #endif
 
 // Declare get_current_time_ms for external use
@@ -75,27 +78,27 @@ static bool connections_match(const pool_connection_t* conn, const char* host,
 // =====================
 
 int betanet_pool_init(void) {
-    memset(&g_connection_pool, 0, sizeof(g_connection_pool));
+    secure_memset(&g_connection_pool, 0, sizeof(g_connection_pool));
     g_connection_pool.last_cleanup = get_current_time_ms();
-    printf("[perf] Connection pool initialized with %d slots\n", BETANET_MAX_POOLED_CONNECTIONS);
+    BETANET_LOG_INFO(BETANET_LOG_TAG_PERF, "[perf] Connection pool initialized with %d slots\n", BETANET_MAX_POOLED_CONNECTIONS);
     return 0;
 }
 
 void betanet_pool_shutdown(void) {
-    printf("[perf] Shutting down connection pool...\n");
+    BETANET_LOG_INFO(BETANET_LOG_TAG_PERF, "[perf] Shutting down connection pool...\n");
     
     for (int i = 0; i < BETANET_MAX_POOLED_CONNECTIONS; i++) {
         pool_connection_t* conn = &g_connection_pool.connections[i];
         if (conn->ctx) {
-            printf("[perf] Closing pooled connection %d (%s:%d)\n", i, conn->host, conn->port);
+            BETANET_LOG_INFO(BETANET_LOG_TAG_PERF, "[perf] Closing pooled connection %d (%s:%d)\n", i, conn->host, conn->port);
             htx_ctx_free(conn->ctx);
             conn->ctx = NULL;
         }
     }
     
-    printf("[perf] Connection pool shutdown complete. Stats: %d reuses, %d misses\n", 
+    BETANET_LOG_INFO(BETANET_LOG_TAG_PERF, "[perf] Connection pool shutdown complete. Stats: %d reuses, %d misses\n", 
            g_connection_pool.reuse_count, g_connection_pool.miss_count);
-    memset(&g_connection_pool, 0, sizeof(g_connection_pool));
+    secure_memset(&g_connection_pool, 0, sizeof(g_connection_pool));
 }
 
 htx_ctx_t* betanet_pool_get_connection(const char* host, uint16_t port, const char* alpn) {
@@ -112,7 +115,7 @@ htx_ctx_t* betanet_pool_get_connection(const char* host, uint16_t port, const ch
             
             // Check if connection is still valid
             if (current_time - conn->last_used > BETANET_CONNECTION_KEEPALIVE_MS) {
-                printf("[perf] Connection %d expired, closing\n", i);
+                BETANET_LOG_INFO(BETANET_LOG_TAG_PERF, "[perf] Connection %d expired, closing\n", i);
                 htx_ctx_free(conn->ctx);
                 conn->ctx = NULL;
                 conn->state = POOL_CONN_IDLE;
@@ -126,7 +129,7 @@ htx_ctx_t* betanet_pool_get_connection(const char* host, uint16_t port, const ch
             conn->in_use = true;
             g_connection_pool.reuse_count++;
             
-            printf("[perf] Reusing pooled connection %d for %s:%d (use count: %d)\n", 
+            BETANET_LOG_INFO(BETANET_LOG_TAG_PERF, "[perf] Reusing pooled connection %d for %s:%d (use count: %d)\n", 
                    i, host, port, conn->use_count);
             return conn->ctx;
         }
@@ -143,13 +146,13 @@ htx_ctx_t* betanet_pool_get_connection(const char* host, uint16_t port, const ch
             // Create new connection
             htx_ctx_t* new_ctx = htx_ctx_create(HTX_TRANSPORT_TCP);
             if (!new_ctx) {
-                printf("[perf] Failed to create new connection context\n");
+                BETANET_LOG_ERROR(BETANET_LOG_TAG_PERF, "[perf] Failed to create new connection context\n");
                 return NULL;
             }
             
             // Connect to the host
             if (htx_connect(new_ctx, host, port, alpn) != 0) {
-                printf("[perf] Failed to connect to %s:%d\n", host, port);
+                BETANET_LOG_ERROR(BETANET_LOG_TAG_PERF, "[perf] Failed to connect to %s:%d\n", host, port);
                 htx_ctx_free(new_ctx);
                 return NULL;
             }
@@ -171,12 +174,12 @@ htx_ctx_t* betanet_pool_get_connection(const char* host, uint16_t port, const ch
             g_connection_pool.active_count++;
             g_connection_pool.total_connections++;
             
-            printf("[perf] Created new pooled connection %d for %s:%d\n", i, host, port);
+            BETANET_LOG_INFO(BETANET_LOG_TAG_PERF, "[perf] Created new pooled connection %d for %s:%d\n", i, host, port);
             return new_ctx;
         }
     }
     
-    printf("[perf] Connection pool full, creating standalone connection\n");
+    BETANET_LOG_INFO(BETANET_LOG_TAG_PERF, "[perf] Connection pool full, creating standalone connection\n");
     
     // Pool is full, create a standalone connection
     htx_ctx_t* ctx = htx_ctx_create(HTX_TRANSPORT_TCP);
@@ -200,14 +203,14 @@ int betanet_pool_return_connection(htx_ctx_t* ctx) {
             conn->last_used = get_current_time_ms();
             conn->in_use = false;
             
-            printf("[perf] Returned connection %d to pool (%s:%d)\n", 
+            BETANET_LOG_INFO(BETANET_LOG_TAG_PERF, "[perf] Returned connection %d to pool (%s:%d)\n", 
                    i, conn->host, conn->port);
             return 0;
         }
     }
     
     // Not a pooled connection, just free it
-    printf("[perf] Freeing standalone connection\n");
+    BETANET_LOG_INFO(BETANET_LOG_TAG_PERF, "[perf] Freeing standalone connection\n");
     htx_ctx_free(ctx);
     return 0;
 }
@@ -230,10 +233,10 @@ void betanet_pool_cleanup(void) {
             }
             
             if (should_cleanup) {
-                printf("[perf] Cleaning up connection %d (%s:%d, errors: %d)\n", 
+                BETANET_LOG_ERROR(BETANET_LOG_TAG_PERF, "[perf] Cleaning up connection %d (%s:%d, errors: %d)\n", 
                        i, conn->host, conn->port, conn->error_count);
                 htx_ctx_free(conn->ctx);
-                memset(conn, 0, sizeof(*conn));
+                secure_memset(conn, 0, sizeof(*conn));
                 g_connection_pool.active_count--;
                 cleaned++;
             }
@@ -242,7 +245,7 @@ void betanet_pool_cleanup(void) {
     
     g_connection_pool.last_cleanup = current_time;
     if (cleaned > 0) {
-        printf("[perf] Cleaned up %d idle connections\n", cleaned);
+        BETANET_LOG_INFO(BETANET_LOG_TAG_PERF, "[perf] Cleaned up %d idle connections\n", cleaned);
     }
 }
 
@@ -265,7 +268,7 @@ int betanet_mempool_init(size_t pool_size) {
     
     g_memory_pool.pool_memory = malloc(pool_size);
     if (!g_memory_pool.pool_memory) {
-        printf("[perf] Failed to allocate memory pool of size %zu\n", pool_size);
+        BETANET_LOG_ERROR(BETANET_LOG_TAG_PERF, "[perf] Failed to allocate memory pool of size %zu\n", pool_size);
         return -1;
     }
     
@@ -277,16 +280,16 @@ int betanet_mempool_init(size_t pool_size) {
     g_memory_pool.allocation_count = 0;
     g_memory_pool.deallocation_count = 0;
     
-    printf("[perf] Memory pool initialized: %zu bytes\n", pool_size);
+    BETANET_LOG_INFO(BETANET_LOG_TAG_PERF, "[perf] Memory pool initialized: %zu bytes\n", pool_size);
     return 0;
 }
 
 void betanet_mempool_shutdown(void) {
     if (g_memory_pool.pool_memory) {
-        printf("[perf] Memory pool shutdown. Stats: %d allocs, %d deallocs\n", 
+        BETANET_LOG_INFO(BETANET_LOG_TAG_PERF, "[perf] Memory pool shutdown. Stats: %d allocs, %d deallocs\n", 
                g_memory_pool.allocation_count, g_memory_pool.deallocation_count);
         free(g_memory_pool.pool_memory);
-        memset(&g_memory_pool, 0, sizeof(g_memory_pool));
+        secure_memset(&g_memory_pool, 0, sizeof(g_memory_pool));
     }
 }
 
@@ -326,7 +329,7 @@ error_recovery_action_t betanet_handle_error(error_context_t* error_ctx) {
     
     // Determine recovery action based on error type and history
     if (error_ctx->retry_count >= 3) {
-        printf("[perf] Max retries exceeded for error %d\n", error_ctx->error_code);
+        BETANET_LOG_ERROR(BETANET_LOG_TAG_PERF, "[perf] Max retries exceeded for error %d\n", error_ctx->error_code);
         return ERROR_RECOVERY_ABORT;
     }
     
@@ -338,7 +341,7 @@ error_recovery_action_t betanet_handle_error(error_context_t* error_ctx) {
     
     // If errors are happening too frequently, abort
     if ((current_time - error_ctx->first_error) < 5000 && error_ctx->retry_count > 1) {
-        printf("[perf] Error frequency too high, aborting\n");
+        BETANET_LOG_ERROR(BETANET_LOG_TAG_PERF, "[perf] Error frequency too high, aborting\n");
         return ERROR_RECOVERY_ABORT;
     }
     
@@ -372,7 +375,7 @@ int betanet_retry_connection(htx_ctx_t* ctx, const char* host, uint16_t port,
             int delay_ms = 100 * (1 << (retry - 1));
             if (delay_ms > 5000) delay_ms = 5000; // Cap at 5 seconds
             
-            printf("[perf] Retrying connection in %dms (attempt %d/%d)\n", 
+            BETANET_LOG_INFO(BETANET_LOG_TAG_PERF, "[perf] Retrying connection in %dms (attempt %d/%d)\n", 
                    delay_ms, retry + 1, max_retries + 1);
             
 #ifdef _WIN32
@@ -385,7 +388,7 @@ int betanet_retry_connection(htx_ctx_t* ctx, const char* host, uint16_t port,
         // Attempt connection
         int result = htx_connect(ctx, host, port, alpn);
         if (result == 0) {
-            printf("[perf] Connection successful on attempt %d\n", retry + 1);
+            BETANET_LOG_INFO(BETANET_LOG_TAG_PERF, "[perf] Connection successful on attempt %d\n", retry + 1);
             betanet_metrics_record_connection(true, 0);
             return 0;
         }
@@ -397,7 +400,7 @@ int betanet_retry_connection(htx_ctx_t* ctx, const char* host, uint16_t port,
         
         error_recovery_action_t action = betanet_handle_error(&error_ctx);
         if (action == ERROR_RECOVERY_ABORT) {
-            printf("[perf] Aborting connection attempts after %d tries\n", retry + 1);
+            BETANET_LOG_INFO(BETANET_LOG_TAG_PERF, "[perf] Aborting connection attempts after %d tries\n", retry + 1);
             break;
         }
     }
@@ -431,7 +434,7 @@ bool betanet_connection_is_healthy(htx_ctx_t* ctx) {
 int betanet_repair_connection(htx_ctx_t* ctx) {
     if (!ctx) return -1;
     
-    printf("[perf] Attempting connection repair\n");
+    BETANET_LOG_INFO(BETANET_LOG_TAG_PERF, "[perf] Attempting connection repair\n");
     
     // For now, just mark as disconnected and let the caller reconnect
     ctx->is_connected = 0;
@@ -444,10 +447,10 @@ int betanet_repair_connection(htx_ctx_t* ctx) {
 // =====================
 
 int betanet_metrics_init(void) {
-    memset(&g_metrics, 0, sizeof(g_metrics));
+    secure_memset(&g_metrics, 0, sizeof(g_metrics));
     g_metrics.start_time = get_current_time_ms();
     g_metrics.last_update = g_metrics.start_time;
-    printf("[perf] Performance metrics initialized\n");
+    BETANET_LOG_INFO(BETANET_LOG_TAG_PERF, "[perf] Performance metrics initialized\n");
     return 0;
 }
 
@@ -489,10 +492,10 @@ void betanet_metrics_record_error(int error_code, bool recoverable) {
 
 void betanet_metrics_reset(void) {
     time_t start_time = g_metrics.start_time;
-    memset(&g_metrics, 0, sizeof(g_metrics));
+    secure_memset(&g_metrics, 0, sizeof(g_metrics));
     g_metrics.start_time = start_time;
     g_metrics.last_update = get_current_time_ms();
-    printf("[perf] Performance metrics reset\n");
+    BETANET_LOG_INFO(BETANET_LOG_TAG_PERF, "[perf] Performance metrics reset\n");
 }
 
 void betanet_metrics_print_report(void) {
@@ -500,46 +503,46 @@ void betanet_metrics_print_report(void) {
     time_t uptime_ms = metrics->last_update - metrics->start_time;
     double uptime_sec = uptime_ms / 1000.0;
     
-    printf("\n=== BetaNet Performance Report ===\n");
-    printf("Uptime: %.2f seconds\n", uptime_sec);
-    printf("\nConnection Metrics:\n");
-    printf("  Total connections: %llu\n", (unsigned long long)metrics->total_connections);
-    printf("  Successful: %llu (%.1f%%)\n", 
+    BETANET_LOG_INFO(BETANET_LOG_TAG_PERF, "\n=== BetaNet Performance Report ===\n");
+    BETANET_LOG_INFO(BETANET_LOG_TAG_CORE, "Uptime: %.2f seconds\n", uptime_sec);
+    BETANET_LOG_INFO(BETANET_LOG_TAG_CORE, "\nConnection Metrics:\n");
+    BETANET_LOG_INFO(BETANET_LOG_TAG_CORE, "  Total connections: %llu\n", (unsigned long long)metrics->total_connections);
+    BETANET_LOG_INFO(BETANET_LOG_TAG_CORE, "  Successful: %llu (%.1f%%)\n", 
            (unsigned long long)metrics->successful_connections,
            metrics->total_connections > 0 ? 
            (100.0 * metrics->successful_connections / metrics->total_connections) : 0);
-    printf("  Failed: %llu\n", (unsigned long long)metrics->failed_connections);
-    printf("  Reuses: %llu\n", (unsigned long long)metrics->connection_reuses);
-    printf("  Avg connection time: %.2f ms\n", metrics->avg_connection_time_ms);
+    BETANET_LOG_ERROR(BETANET_LOG_TAG_CORE, "  Failed: %llu\n", (unsigned long long)metrics->failed_connections);
+    BETANET_LOG_INFO(BETANET_LOG_TAG_CORE, "  Reuses: %llu\n", (unsigned long long)metrics->connection_reuses);
+    BETANET_LOG_INFO(BETANET_LOG_TAG_CORE, "  Avg connection time: %.2f ms\n", metrics->avg_connection_time_ms);
     
-    printf("\nData Transfer:\n");
-    printf("  Bytes sent: %llu\n", (unsigned long long)metrics->bytes_sent);
-    printf("  Bytes received: %llu\n", (unsigned long long)metrics->bytes_received);
-    printf("  Messages sent: %llu\n", (unsigned long long)metrics->messages_sent);
-    printf("  Messages received: %llu\n", (unsigned long long)metrics->messages_received);
+    BETANET_LOG_INFO(BETANET_LOG_TAG_CORE, "\nData Transfer:\n");
+    BETANET_LOG_INFO(BETANET_LOG_TAG_CORE, "  Bytes sent: %llu\n", (unsigned long long)metrics->bytes_sent);
+    BETANET_LOG_INFO(BETANET_LOG_TAG_CORE, "  Bytes received: %llu\n", (unsigned long long)metrics->bytes_received);
+    BETANET_LOG_INFO(BETANET_LOG_TAG_CORE, "  Messages sent: %llu\n", (unsigned long long)metrics->messages_sent);
+    BETANET_LOG_INFO(BETANET_LOG_TAG_CORE, "  Messages received: %llu\n", (unsigned long long)metrics->messages_received);
     
-    printf("\nError Metrics:\n");
-    printf("  Total errors: %llu\n", (unsigned long long)metrics->total_errors);
-    printf("  Recoverable: %llu\n", (unsigned long long)metrics->recoverable_errors);
-    printf("  Critical: %llu\n", (unsigned long long)metrics->critical_errors);
+    BETANET_LOG_ERROR(BETANET_LOG_TAG_CORE, "\nError Metrics:\n");
+    BETANET_LOG_ERROR(BETANET_LOG_TAG_CORE, "  Total errors: %llu\n", (unsigned long long)metrics->total_errors);
+    BETANET_LOG_INFO(BETANET_LOG_TAG_CORE, "  Recoverable: %llu\n", (unsigned long long)metrics->recoverable_errors);
+    BETANET_LOG_ERROR(BETANET_LOG_TAG_CORE, "  Critical: %llu\n", (unsigned long long)metrics->critical_errors);
     
     // Pool statistics
     uint32_t active, total, reuse_rate;
     betanet_pool_get_stats(&active, &total, &reuse_rate);
-    printf("\nConnection Pool:\n");
-    printf("  Active connections: %d\n", active);
-    printf("  Total created: %d\n", total);
-    printf("  Reuse rate: %d%%\n", reuse_rate);
+    BETANET_LOG_INFO(BETANET_LOG_TAG_CORE, "\nConnection Pool:\n");
+    BETANET_LOG_INFO(BETANET_LOG_TAG_CORE, "  Active connections: %d\n", active);
+    BETANET_LOG_INFO(BETANET_LOG_TAG_CORE, "  Total created: %d\n", total);
+    BETANET_LOG_INFO(BETANET_LOG_TAG_CORE, "  Reuse rate: %d%%\n", reuse_rate);
     
     // Memory statistics
     uint32_t total_blocks, free_blocks, allocations, deallocations;
     betanet_mempool_get_stats(&total_blocks, &free_blocks, &allocations, &deallocations);
-    printf("\nMemory Pool:\n");
-    printf("  Allocations: %d\n", allocations);
-    printf("  Deallocations: %d\n", deallocations);
-    printf("  Outstanding: %d\n", allocations - deallocations);
+    BETANET_LOG_INFO(BETANET_LOG_TAG_CORE, "\nMemory Pool:\n");
+    BETANET_LOG_INFO(BETANET_LOG_TAG_CORE, "  Allocations: %d\n", allocations);
+    BETANET_LOG_INFO(BETANET_LOG_TAG_CORE, "  Deallocations: %d\n", deallocations);
+    BETANET_LOG_INFO(BETANET_LOG_TAG_CORE, "  Outstanding: %d\n", allocations - deallocations);
     
-    printf("================================\n\n");
+    BETANET_LOG_INFO(BETANET_LOG_TAG_CORE, "================================\n\n");
 }
 
 // =====================
@@ -554,7 +557,7 @@ void betanet_set_timeouts(time_t connect_ms, time_t handshake_ms,
     g_timeouts.write_timeout = write_ms;
     g_timeouts.keepalive_timeout = keepalive_ms;
     
-    printf("[perf] Updated timeouts: connect=%lldms, handshake=%lldms, read=%lldms, write=%lldms, keepalive=%lldms\n",
+    BETANET_LOG_INFO(BETANET_LOG_TAG_PERF, "[perf] Updated timeouts: connect=%lldms, handshake=%lldms, read=%lldms, write=%lldms, keepalive=%lldms\n",
            (long long)connect_ms, (long long)handshake_ms, (long long)read_ms, (long long)write_ms, (long long)keepalive_ms);
 }
 
@@ -576,32 +579,32 @@ bool betanet_check_timeout(time_t start_time, time_t timeout_ms) {
  */
 int betanet_performance_init(void) {
     if (g_performance_initialized) {
-        printf("[perf] Performance subsystems already initialized\n");
+        BETANET_LOG_INFO(BETANET_LOG_TAG_PERF, "[perf] Performance subsystems already initialized\n");
         return 0;
     }
     
-    printf("[perf] Initializing BetaNet performance optimizations...\n");
+    BETANET_LOG_INFO(BETANET_LOG_TAG_PERF, "[perf] Initializing BetaNet performance optimizations...\n");
     
     if (betanet_pool_init() != 0) {
-        printf("[perf] Failed to initialize connection pool\n");
+        BETANET_LOG_ERROR(BETANET_LOG_TAG_PERF, "[perf] Failed to initialize connection pool\n");
         return -1;
     }
     
     if (betanet_mempool_init(0) != 0) {
-        printf("[perf] Failed to initialize memory pool\n");
+        BETANET_LOG_ERROR(BETANET_LOG_TAG_PERF, "[perf] Failed to initialize memory pool\n");
         betanet_pool_shutdown();
         return -1;
     }
     
     if (betanet_metrics_init() != 0) {
-        printf("[perf] Failed to initialize metrics\n");
+        BETANET_LOG_ERROR(BETANET_LOG_TAG_PERF, "[perf] Failed to initialize metrics\n");
         betanet_mempool_shutdown();
         betanet_pool_shutdown();
         return -1;
     }
     
     g_performance_initialized = true;
-    printf("[perf] All performance subsystems initialized successfully\n");
+    BETANET_LOG_INFO(BETANET_LOG_TAG_PERF, "[perf] All performance subsystems initialized successfully\n");
     return 0;
 }
 
@@ -611,7 +614,7 @@ int betanet_performance_init(void) {
 void betanet_performance_shutdown(void) {
     if (!g_performance_initialized) return;
     
-    printf("[perf] Shutting down BetaNet performance optimizations...\n");
+    BETANET_LOG_INFO(BETANET_LOG_TAG_PERF, "[perf] Shutting down BetaNet performance optimizations...\n");
     
     // Print final performance report
     betanet_metrics_print_report();
@@ -620,5 +623,5 @@ void betanet_performance_shutdown(void) {
     betanet_mempool_shutdown();
     
     g_performance_initialized = false;
-    printf("[perf] Performance subsystems shutdown complete\n");
+    BETANET_LOG_INFO(BETANET_LOG_TAG_PERF, "[perf] Performance subsystems shutdown complete\n");
 }

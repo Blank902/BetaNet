@@ -10,7 +10,7 @@
 
 void betanet_path_init(betanet_path_list_t* plist) {
     if (!plist) return;
-    memset(plist, 0, sizeof(betanet_path_list_t));
+    secure_memset(plist, 0, sizeof(betanet_path_list_t));
     plist->count = 0;
     plist->num_active = 0;
     plist->active_indices[0] = 0; // Default to first path as active
@@ -61,6 +61,7 @@ void betanet_path_validate(betanet_path_list_t* plist, size_t index, int valid) 
  */
 #include <stdint.h>
 #include <inttypes.h>
+#include "../../include/betanet/secure_log.h"
 
 /* =========================
  * Multipath Routing API Hooks
@@ -319,7 +320,7 @@ void betanet_mixnet_path_provider(
             uint32_t idx = (betanet_entropy_hash(src_peer_id, dst_peer_id, stream_nonce, salt + i + attempts) + i) % BETANET_BEACONSET_SIZE;
             const betanet_mixnode_info_t* candidate = &BEACONSET[idx];
             if (!betanet_mixnode_in_path(&path, candidate->nym_id, i)) {
-                snprintf(path.mixnet_hops[i].nym_id, sizeof(path.mixnet_hops[i].nym_id), "%s", candidate->nym_id);
+                secure_snprintf(path.mixnet_hops[i].nym_id, sizeof(path.mixnet_hops[i].nym_id), "%s", candidate->nym_id);
                 path.mixnet_hops[i].as_group = candidate->as_group;
                 path.mixnet_hops[i].trust_score = candidate->trust_score;
                 break;

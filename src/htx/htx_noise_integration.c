@@ -7,6 +7,7 @@
  */
 
 #include "betanet/htx_noise_integration.h"
+#include "../../include/betanet/secure_log.h"
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
@@ -16,6 +17,8 @@
 #include <windows.h>
 #else
 #include <sys/time.h>
+#include "../../include/betanet/secure_utils.h"
+#include "../../include/betanet/secure_log.h"
 #endif
 
 // ============================================================================
@@ -85,7 +88,7 @@ static int receive_handshake_message(htx_noise_connection_t* conn,
         return HTX_NOISE_ERROR_TRANSPORT;
     }
     
-    memcpy(buffer, mock_message, mock_len);
+    secure_memcpy(buffer, sizeof(buffer), mock_message, mock_len);
     *received_len = mock_len;
     
     return HTX_NOISE_OK;
@@ -141,7 +144,7 @@ int htx_noise_handshake(htx_noise_connection_t* conn,
     uint64_t start_time = get_timestamp_ms();
     
     // Clear result structure
-    memset(result, 0, sizeof(htx_noise_handshake_result_t));
+    secure_memset(result, 0, sizeof(htx_noise_handshake_result_t));
     
     // Generate session ID
     RAND_bytes(result->session_id, sizeof(result->session_id));
@@ -167,7 +170,7 @@ int htx_noise_handshake(htx_noise_connection_t* conn,
         }
         
         // Extract peer static key (simulated)
-        memcpy(result->peer_static_key, server_response, 32);
+        secure_memcpy(result->peer_static_key, sizeof(result->peer_static_key), server_response, 32);
         
     } else {
         // Server responds to handshake
@@ -188,7 +191,7 @@ int htx_noise_handshake(htx_noise_connection_t* conn,
         }
         
         // Store peer key (simulated)
-        memcpy(result->peer_static_key, client_ephemeral, 32);
+        secure_memcpy(result->peer_static_key, sizeof(result->peer_static_key), client_ephemeral, 32);
     }
     
     // Derive session keys using HKDF (simplified simulation)
@@ -203,7 +206,7 @@ int htx_noise_handshake(htx_noise_connection_t* conn,
     result->handshake_duration_ms = get_timestamp_ms() - start_time;
     result->success = true;
     
-    printf("[htx-noise] Handshake completed in %llu ms\n", 
+    BETANET_LOG_INFO(BETANET_LOG_TAG_HTX, "[htx-noise] Handshake completed in %llu ms\n", 
            (unsigned long long)result->handshake_duration_ms);
     
     return HTX_NOISE_OK;
@@ -284,7 +287,7 @@ int htx_noise_send_message(htx_noise_connection_t* conn,
     
     // Use ChaCha20-Poly1305 encryption (simplified)
     // In real implementation, would use proper AEAD
-    memcpy(encrypted_buffer, message->data, message->data_len);
+    secure_memcpy(encrypted_buffer, sizeof(encrypted_buffer), message->data, message->data_len);
     encrypted_len = message->data_len; // Simplified - no actual encryption for demo
     
     // Send encrypted data via HTX frames
@@ -320,7 +323,7 @@ int htx_noise_receive_message(htx_noise_connection_t* conn,
         return HTX_NOISE_ERROR_OUT_OF_MEMORY;
     }
     
-    memcpy(message->data, "Hello, world!", message->data_len);
+    secure_memcpy(message->data, sizeof(message->data), "Hello, world!", message->data_len);
     message->is_final = false;
     
     // Update statistics
@@ -393,7 +396,7 @@ int htx_noise_rekey(htx_noise_connection_t* conn) {
         return HTX_NOISE_ERROR_INVALID_PARAM;
     }
     
-    printf("[htx-noise] Performing key rotation...\n");
+    BETANET_LOG_INFO(BETANET_LOG_TAG_HTX, "[htx-noise] Performing key rotation...\n");
     
     // Rekey HTX layer - generate transcript hash for handshake
     uint8_t transcript_hash[32];
@@ -406,8 +409,8 @@ int htx_noise_rekey(htx_noise_connection_t* conn) {
     
     // Rekey Noise layer - generate new session keys
     uint8_t old_tx_key[32], old_rx_key[32];
-    memcpy(old_tx_key, conn->noise_chan->tx_key, 32);
-    memcpy(old_rx_key, conn->noise_chan->rx_key, 32);
+    secure_memcpy(old_tx_key, sizeof(old_tx_key), conn->noise_chan->tx_key, 32);
+    secure_memcpy(old_rx_key, sizeof(old_rx_key), conn->noise_chan->rx_key, 32);
     
     // Derive new keys (simplified - would use proper KDF in real implementation)
     RAND_bytes(conn->noise_chan->tx_key, sizeof(conn->noise_chan->tx_key));
@@ -423,7 +426,7 @@ int htx_noise_rekey(htx_noise_connection_t* conn) {
     conn->messages_sent = 0;
     conn->messages_received = 0;
     
-    printf("[htx-noise] Key rotation completed successfully\n");
+    BETANET_LOG_INFO(BETANET_LOG_TAG_HTX, "[htx-noise] Key rotation completed successfully\n");
     
     return HTX_NOISE_OK;
 }

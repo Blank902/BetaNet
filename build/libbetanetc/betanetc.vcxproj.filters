@@ -19,6 +19,12 @@
     <ClCompile Include="C:\Users\xxlmn\Documents\BetaNet\src\htx\htx_noise_integration.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="C:\Users\xxlmn\Documents\BetaNet\src\htx\htx_transport.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\xxlmn\Documents\BetaNet\src\htx\origin_calibration.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="C:\Users\xxlmn\Documents\BetaNet\src\noise\noise.c">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -26,6 +32,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="C:\Users\xxlmn\Documents\BetaNet\src\path\path.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\xxlmn\Documents\BetaNet\src\path\path_optimization.c">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="C:\Users\xxlmn\Documents\BetaNet\src\path\scion.c">
@@ -64,6 +73,15 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="C:\Users\xxlmn\Documents\BetaNet\include\betanet\htx_noise_integration.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\Users\xxlmn\Documents\BetaNet\include\betanet\htx_transport.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\Users\xxlmn\Documents\BetaNet\include\betanet\htx_calibration.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\Users\xxlmn\Documents\BetaNet\include\betanet\path_optimization.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
