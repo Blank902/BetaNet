@@ -13,6 +13,7 @@ add_library(betanetc
     ../src/boot/boot.c
     ../src/util/util.c
     ../src/util/cert_utils.c
+    ../src/util/performance.c
     ../src/pay/pay.c
 )
 

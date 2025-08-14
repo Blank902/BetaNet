@@ -13,4 +13,6 @@ C:/Users/xxlmn/Documents/BetaNet/build/tests/interop/CMakeFiles/interop_protocol
 C:/Users/xxlmn/Documents/BetaNet/build/tests/interop/CMakeFiles/RUN_TESTS.dir
 C:/Users/xxlmn/Documents/BetaNet/build/tests/integration/CMakeFiles/noise_handshake_test.dir
 C:/Users/xxlmn/Documents/BetaNet/build/tests/integration/CMakeFiles/tls_server_demo.dir
+C:/Users/xxlmn/Documents/BetaNet/build/tests/integration/CMakeFiles/end_to_end_test.dir
+C:/Users/xxlmn/Documents/BetaNet/build/tests/integration/CMakeFiles/performance_test.dir
 C:/Users/xxlmn/Documents/BetaNet/build/tests/integration/CMakeFiles/RUN_TESTS.dir

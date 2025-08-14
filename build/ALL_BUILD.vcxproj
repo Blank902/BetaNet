@@ -181,6 +181,10 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
       <Project>{20AD1B55-4EB3-33F7-B9C7-3F783BAE6DC2}</Project>
       <Name>bnetc-cli</Name>
     </ProjectReference>
+    <ProjectReference Include="C:\Users\xxlmn\Documents\BetaNet\build\tests\integration\end_to_end_test.vcxproj">
+      <Project>{8B89456E-012D-3091-A6E0-29F3189869FC}</Project>
+      <Name>end_to_end_test</Name>
+    </ProjectReference>
     <ProjectReference Include="C:\Users\xxlmn\Documents\BetaNet\build\tests\unit\fingerprint_regression_test.vcxproj">
       <Project>{1DC94C84-C8D3-3D22-BF27-AC8631FD2451}</Project>
       <Name>fingerprint_regression_test</Name>
@@ -192,6 +196,10 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     <ProjectReference Include="C:\Users\xxlmn\Documents\BetaNet\build\tests\integration\noise_handshake_test.vcxproj">
       <Project>{F9EB9D02-C3D7-3809-AA8F-DE8AE30D9B8F}</Project>
       <Name>noise_handshake_test</Name>
+    </ProjectReference>
+    <ProjectReference Include="C:\Users\xxlmn\Documents\BetaNet\build\tests\integration\performance_test.vcxproj">
+      <Project>{1AA168EC-1091-3EE4-940F-A28A51BBD55E}</Project>
+      <Name>performance_test</Name>
     </ProjectReference>
     <ProjectReference Include="C:\Users\xxlmn\Documents\BetaNet\build\tests\unit\protocol_regression_test.vcxproj">
       <Project>{34405C61-47BF-38C7-98E6-999D477F0301}</Project>

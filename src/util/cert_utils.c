@@ -2,6 +2,10 @@
  * @file cert_utils.c
  * @brief Certificate utilities for testing TLS server functionality
  */
+#ifdef _WIN32
+#include <openssl/applink.c>  // Fix for Windows APPLINK issue
+#endif
+
 #include "cert_utils.h"
 #include <openssl/evp.h>
 #include <openssl/rsa.h>

@@ -8,13 +8,28 @@
 #include "../src/shape/shape.h"
 #include "../src/path/path.h"
 #include "../src/util/platform.h"
+#include "../src/util/performance.h"
+
+// Forward declaration for performance initialization
+int betanet_performance_init(void);
+void betanet_performance_shutdown(void);
 
 void betanet_init(void) {
     // Initialize platform (Winsock on Windows)
     betanet_platform_init();
+    
+    // Initialize performance optimizations
+    if (betanet_performance_init() != 0) {
+        printf("[betanet] Warning: Performance optimizations initialization failed\n");
+    } else {
+        printf("[betanet] Performance optimizations enabled\n");
+    }
 }
 
 void betanet_shutdown(void) {
+    // Shutdown performance optimizations
+    betanet_performance_shutdown();
+    
     // Cleanup platform (Winsock on Windows)
     betanet_platform_cleanup();
 }
@@ -65,6 +80,9 @@ void betanet_ctx_free(htx_ctx_t* ctx) {
 int betanet_connect_with_ticket(htx_ctx_t* ctx, const char* host, uint16_t port, const char* ticket_str) {
     if (!ctx) return -1;
     
+    // Record connection attempt start time for metrics
+    time_t start_time = get_current_time_ms();
+    
     // Parse and validate ticket if provided
     if (ticket_str) {
         htx_ticket_t ticket;
@@ -79,18 +97,40 @@ int betanet_connect_with_ticket(htx_ctx_t* ctx, const char* host, uint16_t port,
         }
     }
     
-    // Attempt real connection using HTX layer
-    printf("[betanet] Attempting real connection to %s:%u\n", host ? host : "localhost", port);
+    printf("[betanet] Connecting to %s:%u with performance optimizations\n", 
+           host ? host : "localhost", port);
     
-    // Use HTTP/2 ALPN for BetaNet protocol
-    int result = htx_connect(ctx, host, port, HTX_ALPN_HTTP2);
+    // Try to get a connection from the pool first
+    htx_ctx_t* pooled_ctx = betanet_pool_get_connection(host, port, HTX_ALPN_HTTP2);
+    if (pooled_ctx && pooled_ctx != ctx) {
+        // Copy the pooled connection state to our context
+        ctx->transport = pooled_ctx->transport;
+        ctx->is_connected = pooled_ctx->is_connected;
+        strncpy(ctx->alpn_selected, pooled_ctx->alpn_selected, sizeof(ctx->alpn_selected));
+        ctx->state = pooled_ctx->state;
+        
+        printf("[betanet] Using pooled connection to %s:%u\n", host ? host : "localhost", port);
+        
+        // Record successful connection reuse
+        time_t duration = get_current_time_ms() - start_time;
+        betanet_metrics_record_connection(true, (double)duration);
+        return 0;
+    }
+    
+    // No pooled connection available, try new connection with retry logic
+    int result = betanet_retry_connection(ctx, host, port, HTX_ALPN_HTTP2, 2);
+    
     if (result == 0) {
         printf("[betanet] Successfully connected to %s:%u\n", host ? host : "localhost", port);
+        time_t duration = get_current_time_ms() - start_time;
+        betanet_metrics_record_connection(true, (double)duration);
         return 0;
     } else {
         printf("[betanet] Connection failed, falling back to demo mode\n");
         // Fallback to demo mode for testing
         ctx->is_connected = 1;
+        time_t duration = get_current_time_ms() - start_time;
+        betanet_metrics_record_connection(false, (double)duration);
         return 0;
     }
 }
@@ -166,10 +206,18 @@ int betanet_secure_send(noise_channel_t* chan, const uint8_t* msg, size_t msg_le
     // Use real secure send if handshake is complete
     if (chan->handshake_complete && chan->htx && chan->htx->state.tcp.ssl) {
         printf("[betanet] Sending %zu bytes over secure channel\n", msg_len);
-        return noise_channel_send(chan, msg, msg_len);
+        int result = noise_channel_send(chan, msg, msg_len);
+        
+        // Record transfer metrics
+        if (result == 0) {
+            betanet_metrics_record_transfer(msg_len, 0);
+        }
+        
+        return result;
     } else {
         // Demo mode: simulate successful send
         printf("[betanet] Demo mode: sending %zu bytes\n", msg_len);
+        betanet_metrics_record_transfer(msg_len, 0);
         return 0; // Success
     }
 }
@@ -180,7 +228,14 @@ int betanet_secure_recv(noise_channel_t* chan, uint8_t* out, size_t max_len, siz
     // Use real secure recv if handshake is complete
     if (chan->handshake_complete && chan->htx && chan->htx->state.tcp.ssl) {
         printf("[betanet] Receiving data over secure channel\n");
-        return noise_channel_recv(chan, out, max_len, out_len);
+        int result = noise_channel_recv(chan, out, max_len, out_len);
+        
+        // Record transfer metrics
+        if (result == 0 && out_len && *out_len > 0) {
+            betanet_metrics_record_transfer(0, *out_len);
+        }
+        
+        return result;
     } else {
         // Demo mode: simulate receiving a message
         printf("[betanet] Demo mode: receiving data\n");
@@ -190,6 +245,7 @@ int betanet_secure_recv(noise_channel_t* chan, uint8_t* out, size_t max_len, siz
         if (demo_len > max_len) demo_len = max_len;
         memcpy(out, demo_msg, demo_len);
         *out_len = demo_len;
+        betanet_metrics_record_transfer(0, demo_len);
         return 0; // Success
     }
 }

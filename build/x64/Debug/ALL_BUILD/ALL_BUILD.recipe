@@ -8,6 +8,9 @@
       <FullPath>C:\Users\xxlmn\Documents\BetaNet\build\cli\bnetc-cli\Debug\bnetc-cli.exe</FullPath>
     </ProjectOutput>
     <ProjectOutput>
+      <FullPath>C:\Users\xxlmn\Documents\BetaNet\build\tests\integration\Debug\end_to_end_test.exe</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
       <FullPath>C:\Users\xxlmn\Documents\BetaNet\build\tests\unit\Debug\fingerprint_regression_test.exe</FullPath>
     </ProjectOutput>
     <ProjectOutput>
@@ -15,6 +18,9 @@
     </ProjectOutput>
     <ProjectOutput>
       <FullPath>C:\Users\xxlmn\Documents\BetaNet\build\tests\integration\Debug\noise_handshake_test.exe</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
+      <FullPath>C:\Users\xxlmn\Documents\BetaNet\build\tests\integration\Debug\performance_test.exe</FullPath>
     </ProjectOutput>
     <ProjectOutput>
       <FullPath>C:\Users\xxlmn\Documents\BetaNet\build\tests\unit\Debug\protocol_regression_test.exe</FullPath>
