@@ -1,6 +1,8 @@
 C:\Users\xxlmn\Documents\BetaNet\libbetanetc\betanet.c;C:\Users\xxlmn\Documents\BetaNet\build\libbetanetc\betanetc.dir\Debug\betanet.obj
 C:\Users\xxlmn\Documents\BetaNet\src\htx\htx.c;C:\Users\xxlmn\Documents\BetaNet\build\libbetanetc\betanetc.dir\Debug\htx.obj
 C:\Users\xxlmn\Documents\BetaNet\src\htx\ticket.c;C:\Users\xxlmn\Documents\BetaNet\build\libbetanetc\betanetc.dir\Debug\ticket.obj
+C:\Users\xxlmn\Documents\BetaNet\src\htx\htx_tickets.c;C:\Users\xxlmn\Documents\BetaNet\build\libbetanetc\betanetc.dir\Debug\htx_tickets.obj
+C:\Users\xxlmn\Documents\BetaNet\src\htx\htx_frames.c;C:\Users\xxlmn\Documents\BetaNet\build\libbetanetc\betanetc.dir\Debug\htx_frames.obj
 C:\Users\xxlmn\Documents\BetaNet\src\noise\noise.c;C:\Users\xxlmn\Documents\BetaNet\build\libbetanetc\betanetc.dir\Debug\noise.obj
 C:\Users\xxlmn\Documents\BetaNet\src\shape\shape.c;C:\Users\xxlmn\Documents\BetaNet\build\libbetanetc\betanetc.dir\Debug\shape.obj
 C:\Users\xxlmn\Documents\BetaNet\src\path\path.c;C:\Users\xxlmn\Documents\BetaNet\build\libbetanetc\betanetc.dir\Debug\path.obj
@@ -8,4 +10,5 @@ C:\Users\xxlmn\Documents\BetaNet\src\boot\boot.c;C:\Users\xxlmn\Documents\BetaNe
 C:\Users\xxlmn\Documents\BetaNet\src\util\util.c;C:\Users\xxlmn\Documents\BetaNet\build\libbetanetc\betanetc.dir\Debug\util.obj
 C:\Users\xxlmn\Documents\BetaNet\src\util\cert_utils.c;C:\Users\xxlmn\Documents\BetaNet\build\libbetanetc\betanetc.dir\Debug\cert_utils.obj
 C:\Users\xxlmn\Documents\BetaNet\src\util\performance.c;C:\Users\xxlmn\Documents\BetaNet\build\libbetanetc\betanetc.dir\Debug\performance.obj
+C:\Users\xxlmn\Documents\BetaNet\src\util\scion.c;C:\Users\xxlmn\Documents\BetaNet\build\libbetanetc\betanetc.dir\Debug\scion.obj
 C:\Users\xxlmn\Documents\BetaNet\src\pay\pay.c;C:\Users\xxlmn\Documents\BetaNet\build\libbetanetc\betanetc.dir\Debug\pay.obj

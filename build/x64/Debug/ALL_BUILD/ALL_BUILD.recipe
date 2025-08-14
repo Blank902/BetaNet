@@ -14,6 +14,12 @@
       <FullPath>C:\Users\xxlmn\Documents\BetaNet\build\tests\unit\Debug\fingerprint_regression_test.exe</FullPath>
     </ProjectOutput>
     <ProjectOutput>
+      <FullPath>C:\Users\xxlmn\Documents\BetaNet\build\tests\integration\Debug\htx_frames_test.exe</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
+      <FullPath>C:\Users\xxlmn\Documents\BetaNet\build\tests\integration\Debug\htx_tickets_test.exe</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
       <FullPath>C:\Users\xxlmn\Documents\BetaNet\build\tests\interop\Debug\interop_protocol_test.exe</FullPath>
     </ProjectOutput>
     <ProjectOutput>
@@ -24,6 +30,9 @@
     </ProjectOutput>
     <ProjectOutput>
       <FullPath>C:\Users\xxlmn\Documents\BetaNet\build\tests\unit\Debug\protocol_regression_test.exe</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
+      <FullPath>C:\Users\xxlmn\Documents\BetaNet\build\tests\integration\Debug\scion_test.exe</FullPath>
     </ProjectOutput>
     <ProjectOutput>
       <FullPath>C:\Users\xxlmn\Documents\BetaNet\build\tests\unit\Debug\ticket_parser_fuzz.exe</FullPath>

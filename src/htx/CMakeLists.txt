@@ -1,5 +1,6 @@
-add_library(htx htx.c ticket.c)
+add_library(htx htx.c ticket.c htx_tickets.c)
 target_include_directories(htx PUBLIC ../../include)
+target_link_libraries(htx PUBLIC OpenSSL::SSL OpenSSL::Crypto)
 
 # QUIC integration logic
 if(BETANET_ENABLE_QUIC)

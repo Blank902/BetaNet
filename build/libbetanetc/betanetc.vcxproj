@@ -290,8 +290,12 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
   <ItemGroup>
     <ClCompile Include="C:\Users\xxlmn\Documents\BetaNet\libbetanetc\betanet.c" />
     <ClInclude Include="C:\Users\xxlmn\Documents\BetaNet\include\betanet\betanet.h" />
+    <ClInclude Include="C:\Users\xxlmn\Documents\BetaNet\include\betanet\scion.h" />
+    <ClInclude Include="C:\Users\xxlmn\Documents\BetaNet\include\betanet\htx_frames.h" />
     <ClCompile Include="C:\Users\xxlmn\Documents\BetaNet\src\htx\htx.c" />
     <ClCompile Include="C:\Users\xxlmn\Documents\BetaNet\src\htx\ticket.c" />
+    <ClCompile Include="C:\Users\xxlmn\Documents\BetaNet\src\htx\htx_tickets.c" />
+    <ClCompile Include="C:\Users\xxlmn\Documents\BetaNet\src\htx\htx_frames.c" />
     <ClCompile Include="C:\Users\xxlmn\Documents\BetaNet\src\noise\noise.c" />
     <ClCompile Include="C:\Users\xxlmn\Documents\BetaNet\src\shape\shape.c" />
     <ClCompile Include="C:\Users\xxlmn\Documents\BetaNet\src\path\path.c" />
@@ -299,6 +303,7 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     <ClCompile Include="C:\Users\xxlmn\Documents\BetaNet\src\util\util.c" />
     <ClCompile Include="C:\Users\xxlmn\Documents\BetaNet\src\util\cert_utils.c" />
     <ClCompile Include="C:\Users\xxlmn\Documents\BetaNet\src\util\performance.c" />
+    <ClCompile Include="C:\Users\xxlmn\Documents\BetaNet\src\util\scion.c" />
     <ClCompile Include="C:\Users\xxlmn\Documents\BetaNet\src\pay\pay.c" />
   </ItemGroup>
   <ItemGroup>

@@ -5,8 +5,12 @@ set(GOV_SRC
 add_library(betanetc
     betanet.c
     ../include/betanet/betanet.h
+    ../include/betanet/scion.h
+    ../include/betanet/htx_frames.h
     ../src/htx/htx.c
     ../src/htx/ticket.c
+    ../src/htx/htx_tickets.c
+    ../src/htx/htx_frames.c
     ../src/noise/noise.c
     ../src/shape/shape.c
     ../src/path/path.c
@@ -14,6 +18,7 @@ add_library(betanetc
     ../src/util/util.c
     ../src/util/cert_utils.c
     ../src/util/performance.c
+    ../src/util/scion.c
     ../src/pay/pay.c
 )
 

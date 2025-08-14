@@ -188,6 +188,45 @@ int betanet_secure_rekey(noise_channel_t* chan);
  */
 int betanet_secure_rekey_pending(noise_channel_t* chan);
 
+// ==============================================================================
+// SCION Advanced Routing API
+// ==============================================================================
+
+#include "scion.h"
+
+/**
+ * Discover available SCION paths to destination IA
+ * @param dst_ia_str Destination IA in string format (e.g., "1-ff00:0:111")
+ * @param timeout_ms Discovery timeout in milliseconds
+ * @return 0 on success, -1 on error
+ */
+int betanet_scion_discover_paths(const char* dst_ia_str, uint32_t timeout_ms);
+
+/**
+ * Get quality metrics of currently active SCION path
+ * @param quality_out Output buffer for quality metrics
+ * @return 0 on success, -1 if no active path or error
+ */
+int betanet_scion_get_active_path_quality(scion_path_quality_t* quality_out);
+
+/**
+ * Print comprehensive SCION routing metrics
+ */
+void betanet_scion_print_metrics(void);
+
+/**
+ * Set SCION path selection criteria
+ * @param criteria Selection criteria (latency, bandwidth, reliability, balanced)
+ * @return 0 on success, -1 on error
+ */
+int betanet_scion_set_selection_criteria(scion_selection_criteria_t criteria);
+
+/**
+ * Monitor active path and switch if better path available
+ * @return 1 if path switched, 0 if no switch needed, -1 on error
+ */
+int betanet_scion_monitor_paths(void);
+
 #ifdef __cplusplus
 }
 #endif

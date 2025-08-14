@@ -1,0 +1,1057 @@
+/**
+ * @file htx_frames.c
+ * @brief HTX Inner Frame Format Implementation (BetaNet Specification §5.4)
+ * 
+ * Implements secure transport framing with ChaCha20-Poly1305 encryption,
+ * stream multiplexing, flow control, and key rotation per BetaNet spec.
+ */
+
+#include "betanet/htx_frames.h"
+#include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
+
+#ifdef _WIN32
+#include <winsock2.h>
+#else
+#include <arpa/inet.h>
+#endif
+
+// OpenSSL includes for ChaCha20-Poly1305
+#include <openssl/evp.h>
+#include <openssl/rand.h>
+#include <openssl/kdf.h>
+#include <openssl/params.h>
+
+// ============================================================================
+// Internal Helper Functions
+// ============================================================================
+
+/**
+ * Convert 24-bit length to network byte order
+ */
+static void encode_uint24(uint8_t *buf, uint32_t value) {
+    buf[0] = (value >> 16) & 0xFF;
+    buf[1] = (value >> 8) & 0xFF;
+    buf[2] = value & 0xFF;
+}
+
+/**
+ * Convert 24-bit length from network byte order
+ */
+static uint32_t decode_uint24(const uint8_t *buf) {
+    return ((uint32_t)buf[0] << 16) | 
+           ((uint32_t)buf[1] << 8) | 
+           (uint32_t)buf[2];
+}
+
+/**
+ * Encode varint (variable-length integer)
+ */
+static size_t encode_varint(uint8_t *buf, uint32_t value) {
+    size_t len = 0;
+    while (value >= 0x80) {
+        buf[len++] = (value & 0xFF) | 0x80;
+        value >>= 7;
+    }
+    buf[len++] = value & 0xFF;
+    return len;
+}
+
+/**
+ * Decode varint and return consumed bytes
+ */
+static size_t decode_varint(const uint8_t *buf, size_t buf_len, uint32_t *value) {
+    *value = 0;
+    size_t consumed = 0;
+    uint32_t shift = 0;
+    
+    for (size_t i = 0; i < buf_len && i < 5; i++) {
+        uint8_t byte = buf[i];
+        consumed++;
+        
+        *value |= (uint32_t)(byte & 0x7F) << shift;
+        shift += 7;
+        
+        if ((byte & 0x80) == 0) {
+            return consumed;
+        }
+    }
+    
+    return 0; // Invalid varint
+}
+
+/**
+ * Construct ChaCha20-Poly1305 nonce from counter and salt
+ */
+static void construct_nonce(const uint8_t *nonce_salt, uint64_t counter, uint8_t *nonce) {
+    // Clear nonce buffer
+    memset(nonce, 0, HTX_AEAD_NONCE_SIZE);
+    
+    // Set little-endian counter in first 8 bytes
+    for (int i = 0; i < 8; i++) {
+        nonce[i] = (counter >> (i * 8)) & 0xFF;
+    }
+    
+    // XOR with nonce salt
+    for (int i = 0; i < HTX_AEAD_NONCE_SIZE; i++) {
+        nonce[i] ^= nonce_salt[i];
+    }
+}
+
+/**
+ * Derive nonce salt from key using HKDF
+ */
+static int derive_nonce_salt(const uint8_t *key, uint8_t *nonce_salt) {
+    const char *info = "betanet-htx-nonce-salt";
+    EVP_KDF *kdf = NULL;
+    EVP_KDF_CTX *kctx = NULL;
+    OSSL_PARAM params[4];
+    int ret = HTX_ERROR_CRYPTO;
+    
+    kdf = EVP_KDF_fetch(NULL, "HKDF", NULL);
+    if (!kdf) return HTX_ERROR_CRYPTO;
+    
+    kctx = EVP_KDF_CTX_new(kdf);
+    if (!kctx) goto cleanup;
+    
+    params[0] = OSSL_PARAM_construct_utf8_string("digest", "SHA256", 0);
+    params[1] = OSSL_PARAM_construct_octet_string("key", (void *)key, HTX_AEAD_KEY_SIZE);
+    params[2] = OSSL_PARAM_construct_octet_string("info", (void *)info, strlen(info));
+    params[3] = OSSL_PARAM_construct_end();
+    
+    if (EVP_KDF_derive(kctx, nonce_salt, HTX_AEAD_NONCE_SIZE, params) == 1) {
+        ret = HTX_OK;
+    }
+    
+cleanup:
+    EVP_KDF_CTX_free(kctx);
+    EVP_KDF_free(kdf);
+    return ret;
+}
+
+/**
+ * Derive new key using HKDF for key rotation
+ */
+static int derive_next_key(const uint8_t *current_key, 
+                          const uint8_t *transcript_hash,
+                          size_t transcript_len,
+                          uint8_t *next_key) {
+    const char *info = "next";
+    EVP_KDF *kdf = NULL;
+    EVP_KDF_CTX *kctx = NULL;
+    OSSL_PARAM params[5];
+    int ret = HTX_ERROR_CRYPTO;
+    
+    kdf = EVP_KDF_fetch(NULL, "HKDF", NULL);
+    if (!kdf) return HTX_ERROR_CRYPTO;
+    
+    kctx = EVP_KDF_CTX_new(kdf);
+    if (!kctx) goto cleanup;
+    
+    params[0] = OSSL_PARAM_construct_utf8_string("digest", "SHA256", 0);
+    params[1] = OSSL_PARAM_construct_octet_string("key", (void *)current_key, HTX_AEAD_KEY_SIZE);
+    params[2] = OSSL_PARAM_construct_octet_string("salt", (void *)transcript_hash, transcript_len);
+    params[3] = OSSL_PARAM_construct_octet_string("info", (void *)info, strlen(info));
+    params[4] = OSSL_PARAM_construct_end();
+    
+    if (EVP_KDF_derive(kctx, next_key, HTX_AEAD_KEY_SIZE, params) == 1) {
+        ret = HTX_OK;
+    }
+    
+cleanup:
+    EVP_KDF_CTX_free(kctx);
+    EVP_KDF_free(kdf);
+    return ret;
+}
+
+/**
+ * Encrypt frame payload using ChaCha20-Poly1305
+ */
+static int encrypt_frame_payload(htx_crypto_state_t *crypto,
+                                const uint8_t *plaintext,
+                                size_t plaintext_len,
+                                uint8_t *ciphertext,
+                                size_t *ciphertext_len) {
+    EVP_CIPHER_CTX *ctx = NULL;
+    uint8_t nonce[HTX_AEAD_NONCE_SIZE];
+    int len = 0;
+    
+    // Construct nonce from counter and salt
+    construct_nonce(crypto->nonce_salt, crypto->frame_counter, nonce);
+    
+    // Create cipher context
+    ctx = EVP_CIPHER_CTX_new();
+    if (!ctx) {
+        return HTX_ERROR_CRYPTO;
+    }
+    
+    // Initialize ChaCha20-Poly1305 encryption
+    if (EVP_EncryptInit_ex(ctx, EVP_chacha20_poly1305(), NULL, 
+                          crypto->key, nonce) != 1) {
+        EVP_CIPHER_CTX_free(ctx);
+        return HTX_ERROR_CRYPTO;
+    }
+    
+    // Encrypt plaintext
+    if (EVP_EncryptUpdate(ctx, ciphertext, &len, 
+                         plaintext, (int)plaintext_len) != 1) {
+        EVP_CIPHER_CTX_free(ctx);
+        return HTX_ERROR_CRYPTO;
+    }
+    *ciphertext_len = len;
+    
+    // Finalize and get authentication tag
+    if (EVP_EncryptFinal_ex(ctx, ciphertext + len, &len) != 1) {
+        EVP_CIPHER_CTX_free(ctx);
+        return HTX_ERROR_CRYPTO;
+    }
+    *ciphertext_len += len;
+    
+    // Get authentication tag
+    if (EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_AEAD_GET_TAG, HTX_AEAD_TAG_SIZE,
+                           ciphertext + *ciphertext_len) != 1) {
+        EVP_CIPHER_CTX_free(ctx);
+        return HTX_ERROR_CRYPTO;
+    }
+    *ciphertext_len += HTX_AEAD_TAG_SIZE;
+    
+    EVP_CIPHER_CTX_free(ctx);
+    
+    // Update crypto state
+    crypto->frame_counter++;
+    crypto->frames_sent++;
+    crypto->bytes_encrypted += plaintext_len;
+    
+    return HTX_OK;
+}
+
+/**
+ * Decrypt frame payload using ChaCha20-Poly1305
+ */
+static int decrypt_frame_payload(htx_crypto_state_t *crypto,
+                                const uint8_t *ciphertext,
+                                size_t ciphertext_len,
+                                uint8_t *plaintext,
+                                size_t *plaintext_len) {
+    EVP_CIPHER_CTX *ctx = NULL;
+    uint8_t nonce[HTX_AEAD_NONCE_SIZE];
+    int len = 0;
+    
+    // Validate ciphertext length
+    if (ciphertext_len < HTX_AEAD_TAG_SIZE) {
+        return HTX_ERROR_INVALID_DATA;
+    }
+    
+    size_t payload_len = ciphertext_len - HTX_AEAD_TAG_SIZE;
+    
+    // Construct nonce from counter and salt
+    construct_nonce(crypto->nonce_salt, crypto->frame_counter, nonce);
+    
+    // Create cipher context
+    ctx = EVP_CIPHER_CTX_new();
+    if (!ctx) {
+        return HTX_ERROR_CRYPTO;
+    }
+    
+    // Initialize ChaCha20-Poly1305 decryption
+    if (EVP_DecryptInit_ex(ctx, EVP_chacha20_poly1305(), NULL,
+                          crypto->key, nonce) != 1) {
+        EVP_CIPHER_CTX_free(ctx);
+        return HTX_ERROR_CRYPTO;
+    }
+    
+    // Set authentication tag
+    if (EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_AEAD_SET_TAG, HTX_AEAD_TAG_SIZE,
+                           (void *)(ciphertext + payload_len)) != 1) {
+        EVP_CIPHER_CTX_free(ctx);
+        return HTX_ERROR_CRYPTO;
+    }
+    
+    // Decrypt ciphertext
+    if (EVP_DecryptUpdate(ctx, plaintext, &len,
+                         ciphertext, (int)payload_len) != 1) {
+        EVP_CIPHER_CTX_free(ctx);
+        return HTX_ERROR_CRYPTO;
+    }
+    *plaintext_len = len;
+    
+    // Verify authentication tag
+    if (EVP_DecryptFinal_ex(ctx, plaintext + len, &len) != 1) {
+        EVP_CIPHER_CTX_free(ctx);
+        return HTX_ERROR_AUTH_FAILED;
+    }
+    *plaintext_len += len;
+    
+    EVP_CIPHER_CTX_free(ctx);
+    
+    // Update crypto state
+    crypto->frame_counter++;
+    
+    return HTX_OK;
+}
+
+/**
+ * Find or create stream in connection
+ */
+static htx_stream_t *find_or_create_stream(htx_connection_t *conn, uint32_t stream_id) {
+    // First try to find existing stream
+    for (size_t i = 0; i < HTX_MAX_STREAMS; i++) {
+        if (conn->streams[i].stream_id == stream_id && 
+            conn->streams[i].state != HTX_STREAM_IDLE) {
+            return &conn->streams[i];
+        }
+    }
+    
+    // Find free slot for new stream
+    for (size_t i = 0; i < HTX_MAX_STREAMS; i++) {
+        if (conn->streams[i].state == HTX_STREAM_IDLE) {
+            htx_stream_t *stream = &conn->streams[i];
+            stream->stream_id = stream_id;
+            stream->state = HTX_STREAM_OPEN;
+            stream->send_window = HTX_FLOW_CONTROL_WINDOW;
+            stream->recv_window = HTX_FLOW_CONTROL_WINDOW;
+            stream->bytes_sent = 0;
+            stream->bytes_received = 0;
+            stream->last_activity = time(NULL);
+            conn->active_stream_count++;
+            return stream;
+        }
+    }
+    
+    return NULL; // No free slots
+}
+
+// ============================================================================
+// Public API Implementation
+// ============================================================================
+
+int htx_connection_init(htx_connection_t *conn,
+                       bool is_server,
+                       const uint8_t *k0_client,
+                       const uint8_t *k0_server) {
+    if (!conn || !k0_client || !k0_server) {
+        return HTX_ERROR_INVALID_PARAM;
+    }
+    
+    // Clear connection structure
+    memset(conn, 0, sizeof(htx_connection_t));
+    
+    // Set basic properties
+    conn->is_server = is_server;
+    conn->created_at = time(NULL);
+    
+    // Initialize crypto state
+    if (is_server) {
+        memcpy(conn->send_crypto.key, k0_server, HTX_AEAD_KEY_SIZE);
+        memcpy(conn->recv_crypto.key, k0_client, HTX_AEAD_KEY_SIZE);
+    } else {
+        memcpy(conn->send_crypto.key, k0_client, HTX_AEAD_KEY_SIZE);
+        memcpy(conn->recv_crypto.key, k0_server, HTX_AEAD_KEY_SIZE);
+    }
+    
+    // Derive nonce salts
+    int err;
+    err = derive_nonce_salt(conn->send_crypto.key, conn->send_crypto.nonce_salt);
+    if (err != HTX_OK) return err;
+    
+    err = derive_nonce_salt(conn->recv_crypto.key, conn->recv_crypto.nonce_salt);
+    if (err != HTX_OK) return err;
+    
+    // Initialize crypto counters
+    conn->send_crypto.frame_counter = 0;
+    conn->recv_crypto.frame_counter = 0;
+    conn->send_crypto.last_rekey = time(NULL);
+    conn->recv_crypto.last_rekey = time(NULL);
+    
+    // Initialize stream ID allocation
+    conn->next_client_stream_id = 1;  // Client streams start at 1 (odd)
+    conn->next_server_stream_id = 2;  // Server streams start at 2 (even)
+    
+    // Initialize flow control windows
+    conn->connection_send_window = HTX_FLOW_CONTROL_WINDOW;
+    conn->connection_recv_window = HTX_FLOW_CONTROL_WINDOW;
+    
+    // Initialize all streams to idle
+    for (size_t i = 0; i < HTX_MAX_STREAMS; i++) {
+        conn->streams[i].state = HTX_STREAM_IDLE;
+    }
+    
+    return HTX_OK;
+}
+
+void htx_connection_cleanup(htx_connection_t *conn) {
+    if (!conn) return;
+    
+    // Securely clear cryptographic material
+    OPENSSL_cleanse(&conn->send_crypto, sizeof(htx_crypto_state_t));
+    OPENSSL_cleanse(&conn->recv_crypto, sizeof(htx_crypto_state_t));
+    
+    // Clear connection structure
+    memset(conn, 0, sizeof(htx_connection_t));
+}
+
+int htx_stream_open(htx_connection_t *conn, uint32_t *stream_id) {
+    if (!conn || !stream_id) {
+        return HTX_ERROR_INVALID_PARAM;
+    }
+    
+    // Check if we have room for more streams
+    if (conn->active_stream_count >= HTX_MAX_STREAMS) {
+        return HTX_ERROR_LIMIT_EXCEEDED;
+    }
+    
+    // Allocate stream ID based on role
+    if (conn->is_server) {
+        *stream_id = conn->next_server_stream_id;
+        conn->next_server_stream_id += 2;  // Server uses even IDs
+    } else {
+        *stream_id = conn->next_client_stream_id;
+        conn->next_client_stream_id += 2;  // Client uses odd IDs
+    }
+    
+    // Create stream
+    htx_stream_t *stream = find_or_create_stream(conn, *stream_id);
+    if (!stream) {
+        return HTX_ERROR_OUT_OF_MEMORY;
+    }
+    
+    return HTX_OK;
+}
+
+int htx_stream_close(htx_connection_t *conn, uint32_t stream_id) {
+    if (!conn) {
+        return HTX_ERROR_INVALID_PARAM;
+    }
+    
+    // Find stream
+    for (size_t i = 0; i < HTX_MAX_STREAMS; i++) {
+        if (conn->streams[i].stream_id == stream_id &&
+            conn->streams[i].state != HTX_STREAM_IDLE) {
+            conn->streams[i].state = HTX_STREAM_CLOSED;
+            conn->active_stream_count--;
+            return HTX_OK;
+        }
+    }
+    
+    return HTX_ERROR_NOT_FOUND;
+}
+
+htx_stream_t *htx_stream_get(htx_connection_t *conn, uint32_t stream_id) {
+    if (!conn) return NULL;
+    
+    for (size_t i = 0; i < HTX_MAX_STREAMS; i++) {
+        if (conn->streams[i].stream_id == stream_id &&
+            conn->streams[i].state != HTX_STREAM_IDLE) {
+            return &conn->streams[i];
+        }
+    }
+    
+    return NULL;
+}
+
+int htx_frame_encode_stream(htx_connection_t *conn,
+                                       uint32_t stream_id,
+                                       const uint8_t *data,
+                                       size_t data_len,
+                                       htx_frame_encode_result_t *result) {
+    if (!conn || !data || !result) {
+        return HTX_ERROR_INVALID_PARAM;
+    }
+    
+    // Check flow control
+    if (!htx_flow_control_can_send(conn, stream_id, data_len)) {
+        return HTX_ERROR_FLOW_CONTROL;
+    }
+    
+    // Validate stream
+    htx_stream_t *stream = htx_stream_get(conn, stream_id);
+    if (!stream || stream->state != HTX_STREAM_OPEN) {
+        return HTX_ERROR_INVALID_STREAM;
+    }
+    
+    // Allocate wire buffer (header + encrypted payload + tag)
+    size_t max_header_size = 1 + 3 + 5;  // type + length + varint stream_id
+    size_t wire_size = max_header_size + data_len + HTX_AEAD_TAG_SIZE;
+    result->wire_data = malloc(wire_size);
+    if (!result->wire_data) {
+        return HTX_ERROR_OUT_OF_MEMORY;
+    }
+    
+    // Encrypt payload
+    uint8_t *ciphertext = malloc(data_len + HTX_AEAD_TAG_SIZE);
+    if (!ciphertext) {
+        free(result->wire_data);
+        return HTX_ERROR_OUT_OF_MEMORY;
+    }
+    
+    size_t ciphertext_len;
+    int err = encrypt_frame_payload(&conn->send_crypto, data, data_len,
+                                               ciphertext, &ciphertext_len);
+    if (err != HTX_OK) {
+        free(result->wire_data);
+        free(ciphertext);
+        return err;
+    }
+    
+    // Build wire frame
+    uint8_t *wire_ptr = result->wire_data;
+    
+    // Length field (24-bit, ciphertext only)
+    encode_uint24(wire_ptr, (uint32_t)ciphertext_len);
+    wire_ptr += 3;
+    
+    // Type field
+    *wire_ptr++ = HTX_FRAME_STREAM;
+    
+    // Stream ID (varint)
+    size_t varint_len = encode_varint(wire_ptr, stream_id);
+    wire_ptr += varint_len;
+    
+    // Ciphertext + tag
+    memcpy(wire_ptr, ciphertext, ciphertext_len);
+    wire_ptr += ciphertext_len;
+    
+    result->wire_len = wire_ptr - result->wire_data;
+    free(ciphertext);
+    
+    // Update flow control
+    stream->send_window -= (uint32_t)data_len;
+    stream->bytes_sent += data_len;
+    conn->connection_send_window -= (uint32_t)data_len;
+    conn->total_bytes_sent += data_len;
+    conn->total_frames_sent++;
+    
+    // Check if window update is needed
+    result->needs_window_update = (stream->recv_window <= HTX_WINDOW_UPDATE_THRESHOLD);
+    result->updated_stream_id = stream_id;
+    
+    return HTX_OK;
+}
+
+int htx_frame_encode_ping(htx_connection_t *conn,
+                                     const uint8_t *ping_data,
+                                     htx_frame_encode_result_t *result) {
+    if (!conn || !result) {
+        return HTX_ERROR_INVALID_PARAM;
+    }
+    
+    // Ping payload (8 bytes of timestamp or random data)
+    uint8_t payload[8];
+    if (ping_data) {
+        memcpy(payload, ping_data, 8);
+    } else {
+        // Use current timestamp as ping data
+        uint64_t timestamp = (uint64_t)time(NULL);
+        for (int i = 0; i < 8; i++) {
+            payload[i] = (timestamp >> (i * 8)) & 0xFF;
+        }
+    }
+    
+    // Allocate wire buffer
+    size_t wire_size = 3 + 1 + 8 + HTX_AEAD_TAG_SIZE;  // length + type + payload + tag
+    result->wire_data = malloc(wire_size);
+    if (!result->wire_data) {
+        return HTX_ERROR_OUT_OF_MEMORY;
+    }
+    
+    // Encrypt payload
+    uint8_t ciphertext[8 + HTX_AEAD_TAG_SIZE];
+    size_t ciphertext_len;
+    int err = encrypt_frame_payload(&conn->send_crypto, payload, 8,
+                                               ciphertext, &ciphertext_len);
+    if (err != HTX_OK) {
+        free(result->wire_data);
+        return err;
+    }
+    
+    // Build wire frame
+    uint8_t *wire_ptr = result->wire_data;
+    
+    // Length field
+    encode_uint24(wire_ptr, (uint32_t)ciphertext_len);
+    wire_ptr += 3;
+    
+    // Type field
+    *wire_ptr++ = HTX_FRAME_PING;
+    
+    // Ciphertext + tag
+    memcpy(wire_ptr, ciphertext, ciphertext_len);
+    wire_ptr += ciphertext_len;
+    
+    result->wire_len = wire_ptr - result->wire_data;
+    result->needs_window_update = false;
+    
+    conn->total_frames_sent++;
+    
+    return HTX_OK;
+}
+
+int htx_frame_encode_close(htx_connection_t *conn,
+                                      uint32_t stream_id,
+                                      uint32_t error_code,
+                                      htx_frame_encode_result_t *result) {
+    if (!conn || !result) {
+        return HTX_ERROR_INVALID_PARAM;
+    }
+    
+    // Close payload: error code (4 bytes, little-endian)
+    uint8_t payload[4];
+    for (int i = 0; i < 4; i++) {
+        payload[i] = (error_code >> (i * 8)) & 0xFF;
+    }
+    
+    // Allocate wire buffer
+    size_t header_size = 3 + 1;  // length + type
+    if (stream_id != 0) {
+        header_size += 5;  // varint stream_id (max 5 bytes)
+    }
+    size_t wire_size = header_size + 4 + HTX_AEAD_TAG_SIZE;
+    result->wire_data = malloc(wire_size);
+    if (!result->wire_data) {
+        return HTX_ERROR_OUT_OF_MEMORY;
+    }
+    
+    // Encrypt payload
+    uint8_t ciphertext[4 + HTX_AEAD_TAG_SIZE];
+    size_t ciphertext_len;
+    int err = encrypt_frame_payload(&conn->send_crypto, payload, 4,
+                                               ciphertext, &ciphertext_len);
+    if (err != HTX_OK) {
+        free(result->wire_data);
+        return err;
+    }
+    
+    // Build wire frame
+    uint8_t *wire_ptr = result->wire_data;
+    
+    // Length field
+    encode_uint24(wire_ptr, (uint32_t)ciphertext_len);
+    wire_ptr += 3;
+    
+    // Type field
+    *wire_ptr++ = HTX_FRAME_CLOSE;
+    
+    // Stream ID (if not connection close)
+    if (stream_id != 0) {
+        size_t varint_len = encode_varint(wire_ptr, stream_id);
+        wire_ptr += varint_len;
+    }
+    
+    // Ciphertext + tag
+    memcpy(wire_ptr, ciphertext, ciphertext_len);
+    wire_ptr += ciphertext_len;
+    
+    result->wire_len = wire_ptr - result->wire_data;
+    result->needs_window_update = false;
+    
+    conn->total_frames_sent++;
+    
+    // Close stream if specified
+    if (stream_id != 0) {
+        htx_stream_close(conn, stream_id);
+    }
+    
+    return HTX_OK;
+}
+
+int htx_frame_encode_key_update(htx_connection_t *conn,
+                                           htx_frame_encode_result_t *result) {
+    if (!conn || !result) {
+        return HTX_ERROR_INVALID_PARAM;
+    }
+    
+    // Key update has no payload (just signals rekey)
+    uint8_t payload[1] = {0};  // Minimal payload for encryption
+    
+    // Allocate wire buffer
+    size_t wire_size = 3 + 1 + 1 + HTX_AEAD_TAG_SIZE;  // length + type + payload + tag
+    result->wire_data = malloc(wire_size);
+    if (!result->wire_data) {
+        return HTX_ERROR_OUT_OF_MEMORY;
+    }
+    
+    // Encrypt payload
+    uint8_t ciphertext[1 + HTX_AEAD_TAG_SIZE];
+    size_t ciphertext_len;
+    int err = encrypt_frame_payload(&conn->send_crypto, payload, 1,
+                                               ciphertext, &ciphertext_len);
+    if (err != HTX_OK) {
+        free(result->wire_data);
+        return err;
+    }
+    
+    // Build wire frame
+    uint8_t *wire_ptr = result->wire_data;
+    
+    // Length field
+    encode_uint24(wire_ptr, (uint32_t)ciphertext_len);
+    wire_ptr += 3;
+    
+    // Type field
+    *wire_ptr++ = HTX_FRAME_KEY_UPDATE;
+    
+    // Ciphertext + tag
+    memcpy(wire_ptr, ciphertext, ciphertext_len);
+    wire_ptr += ciphertext_len;
+    
+    result->wire_len = wire_ptr - result->wire_data;
+    result->needs_window_update = false;
+    
+    conn->total_frames_sent++;
+    
+    // Mark that we've sent a key update
+    conn->send_crypto.pending_rekey = true;
+    
+    return HTX_OK;
+}
+
+int htx_frame_encode_window_update(htx_connection_t *conn,
+                                              uint32_t stream_id,
+                                              uint32_t increment,
+                                              htx_frame_encode_result_t *result) {
+    if (!conn || !result || increment == 0) {
+        return HTX_ERROR_INVALID_PARAM;
+    }
+    
+    // Window update payload: increment (4 bytes, little-endian)
+    uint8_t payload[4];
+    for (int i = 0; i < 4; i++) {
+        payload[i] = (increment >> (i * 8)) & 0xFF;
+    }
+    
+    // Allocate wire buffer
+    size_t wire_size = 3 + 1 + 5 + 4 + HTX_AEAD_TAG_SIZE;  // length + type + varint + payload + tag
+    result->wire_data = malloc(wire_size);
+    if (!result->wire_data) {
+        return HTX_ERROR_OUT_OF_MEMORY;
+    }
+    
+    // Encrypt payload
+    uint8_t ciphertext[4 + HTX_AEAD_TAG_SIZE];
+    size_t ciphertext_len;
+    int err = encrypt_frame_payload(&conn->send_crypto, payload, 4,
+                                               ciphertext, &ciphertext_len);
+    if (err != HTX_OK) {
+        free(result->wire_data);
+        return err;
+    }
+    
+    // Build wire frame
+    uint8_t *wire_ptr = result->wire_data;
+    
+    // Length field
+    encode_uint24(wire_ptr, (uint32_t)ciphertext_len);
+    wire_ptr += 3;
+    
+    // Type field
+    *wire_ptr++ = HTX_FRAME_WINDOW_UPDATE;
+    
+    // Stream ID (varint)
+    size_t varint_len = encode_varint(wire_ptr, stream_id);
+    wire_ptr += varint_len;
+    
+    // Ciphertext + tag
+    memcpy(wire_ptr, ciphertext, ciphertext_len);
+    wire_ptr += ciphertext_len;
+    
+    result->wire_len = wire_ptr - result->wire_data;
+    result->needs_window_update = false;
+    
+    conn->total_frames_sent++;
+    
+    return HTX_OK;
+}
+
+int htx_flow_control_consume(htx_connection_t *conn,
+                                        uint32_t stream_id,
+                                        uint32_t bytes_consumed) {
+    if (!conn) {
+        return HTX_ERROR_INVALID_PARAM;
+    }
+    
+    // Update connection-level window
+    if (conn->connection_recv_window < bytes_consumed) {
+        return HTX_ERROR_FLOW_CONTROL;
+    }
+    conn->connection_recv_window -= bytes_consumed;
+    conn->total_bytes_received += bytes_consumed;
+    
+    // Update stream-level window
+    htx_stream_t *stream = htx_stream_get(conn, stream_id);
+    if (stream) {
+        if (stream->recv_window < bytes_consumed) {
+            return HTX_ERROR_FLOW_CONTROL;
+        }
+        stream->recv_window -= bytes_consumed;
+        stream->bytes_received += bytes_consumed;
+        stream->last_activity = time(NULL);
+    }
+    
+    return HTX_OK;
+}
+
+int htx_crypto_rekey(htx_connection_t *conn,
+                                const uint8_t *transcript_hash,
+                                size_t transcript_len) {
+    if (!conn || !transcript_hash) {
+        return HTX_ERROR_INVALID_PARAM;
+    }
+    
+    // Derive new send key
+    uint8_t new_send_key[HTX_AEAD_KEY_SIZE];
+    int err = derive_next_key(conn->send_crypto.key, transcript_hash,
+                                         transcript_len, new_send_key);
+    if (err != HTX_OK) return err;
+    
+    // Derive new receive key
+    uint8_t new_recv_key[HTX_AEAD_KEY_SIZE];
+    err = derive_next_key(conn->recv_crypto.key, transcript_hash,
+                         transcript_len, new_recv_key);
+    if (err != HTX_OK) return err;
+    
+    // Update keys and reset state
+    memcpy(conn->send_crypto.key, new_send_key, HTX_AEAD_KEY_SIZE);
+    memcpy(conn->recv_crypto.key, new_recv_key, HTX_AEAD_KEY_SIZE);
+    
+    // Derive new nonce salts
+    err = derive_nonce_salt(conn->send_crypto.key, conn->send_crypto.nonce_salt);
+    if (err != HTX_OK) return err;
+    
+    err = derive_nonce_salt(conn->recv_crypto.key, conn->recv_crypto.nonce_salt);
+    if (err != HTX_OK) return err;
+    
+    // Reset crypto state
+    conn->send_crypto.frame_counter = 0;
+    conn->recv_crypto.frame_counter = 0;
+    conn->send_crypto.bytes_encrypted = 0;
+    conn->send_crypto.frames_sent = 0;
+    conn->send_crypto.last_rekey = time(NULL);
+    conn->recv_crypto.last_rekey = time(NULL);
+    conn->send_crypto.pending_rekey = false;
+    
+    // Securely clear old keys
+    OPENSSL_cleanse(new_send_key, HTX_AEAD_KEY_SIZE);
+    OPENSSL_cleanse(new_recv_key, HTX_AEAD_KEY_SIZE);
+    
+    return HTX_OK;
+}
+
+int htx_connection_get_stats(const htx_connection_t *conn,
+                                        char *stats_json,
+                                        size_t json_len) {
+    if (!conn || !stats_json) {
+        return HTX_ERROR_INVALID_PARAM;
+    }
+    
+    time_t now = time(NULL);
+    int written = snprintf(stats_json, json_len,
+        "{"
+        "\"uptime_seconds\":%ld,"
+        "\"is_server\":%s,"
+        "\"frames_sent\":%llu,"
+        "\"frames_received\":%llu,"
+        "\"bytes_sent\":%llu,"
+        "\"bytes_received\":%llu,"
+        "\"active_streams\":%zu,"
+        "\"send_window\":%u,"
+        "\"recv_window\":%u,"
+        "\"send_counter\":%llu,"
+        "\"recv_counter\":%llu,"
+        "\"last_ping_rtt_ms\":%u,"
+        "\"needs_rekey\":%s"
+        "}",
+        (long)(now - conn->created_at),
+        conn->is_server ? "true" : "false",
+        conn->total_frames_sent,
+        conn->total_frames_received,
+        conn->total_bytes_sent,
+        conn->total_bytes_received,
+        conn->active_stream_count,
+        conn->connection_send_window,
+        conn->connection_recv_window,
+        conn->send_crypto.frame_counter,
+        conn->recv_crypto.frame_counter,
+        conn->ping_rtt_ms,
+        htx_crypto_needs_rekey(conn) ? "true" : "false"
+    );
+    
+    if (written >= (int)json_len) {
+        return HTX_ERROR_BUFFER_TOO_SMALL;
+    }
+    
+    return HTX_OK;
+}
+
+int htx_frame_decode(htx_connection_t *conn,
+                                const uint8_t *wire_data,
+                                size_t wire_len,
+                                htx_frame_decode_result_t *result) {
+    if (!conn || !wire_data || !result) {
+        return HTX_ERROR_INVALID_PARAM;
+    }
+    
+    // Initialize result
+    memset(result, 0, sizeof(htx_frame_decode_result_t));
+    
+    // Minimum frame size: 3 (length) + 1 (type) + 16 (tag) = 20 bytes
+    if (wire_len < 20) {
+        snprintf(result->error_message, sizeof(result->error_message),
+                "Frame too short: %zu bytes", wire_len);
+        return HTX_ERROR_INVALID_DATA;
+    }
+    
+    const uint8_t *wire_ptr = wire_data;
+    size_t remaining = wire_len;
+    
+    // Parse length field
+    uint32_t ciphertext_len = decode_uint24(wire_ptr);
+    wire_ptr += 3;
+    remaining -= 3;
+    
+    // Parse type field
+    uint8_t frame_type = *wire_ptr++;
+    remaining--;
+    
+    // Validate frame type
+    if (frame_type > HTX_FRAME_WINDOW_UPDATE) {
+        snprintf(result->error_message, sizeof(result->error_message),
+                "Invalid frame type: %u", frame_type);
+        return HTX_ERROR_INVALID_DATA;
+    }
+    
+    result->frame.header.type = frame_type;
+    result->frame.header.length = ciphertext_len;
+    
+    // Parse stream ID for STREAM and WINDOW_UPDATE frames
+    if (frame_type == HTX_FRAME_STREAM || frame_type == HTX_FRAME_WINDOW_UPDATE) {
+        uint32_t stream_id;
+        size_t varint_consumed = decode_varint(wire_ptr, remaining, &stream_id);
+        if (varint_consumed == 0) {
+            snprintf(result->error_message, sizeof(result->error_message),
+                    "Invalid stream ID varint");
+            return HTX_ERROR_INVALID_DATA;
+        }
+        
+        result->frame.header.stream_id = stream_id;
+        result->frame.header.has_stream_id = true;
+        wire_ptr += varint_consumed;
+        remaining -= varint_consumed;
+    }
+    
+    // Validate ciphertext length
+    if (remaining != ciphertext_len) {
+        snprintf(result->error_message, sizeof(result->error_message),
+                "Ciphertext length mismatch: expected %u, got %zu", 
+                ciphertext_len, remaining);
+        return HTX_ERROR_INVALID_DATA;
+    }
+    
+    // Decrypt payload
+    result->frame.plaintext = malloc(ciphertext_len);
+    if (!result->frame.plaintext) {
+        return HTX_ERROR_OUT_OF_MEMORY;
+    }
+    
+    int err = decrypt_frame_payload(&conn->recv_crypto, wire_ptr, ciphertext_len,
+                                               result->frame.plaintext, &result->frame.plaintext_len);
+    if (err != HTX_OK) {
+        free(result->frame.plaintext);
+        snprintf(result->error_message, sizeof(result->error_message),
+                "Decryption failed");
+        return err;
+    }
+    
+    result->valid = true;
+    conn->total_frames_received++;
+    
+    // Check if we need key update
+    result->needs_key_update = htx_crypto_needs_rekey(conn);
+    
+    return HTX_OK;
+}
+
+bool htx_flow_control_can_send(const htx_connection_t *conn,
+                              uint32_t stream_id,
+                              size_t data_len) {
+    if (!conn) return false;
+    
+    // Check connection-level window
+    if (conn->connection_send_window < data_len) {
+        return false;
+    }
+    
+    // Check stream-level window
+    const htx_stream_t *stream = htx_stream_get((htx_connection_t *)conn, stream_id);
+    if (!stream || stream->send_window < data_len) {
+        return false;
+    }
+    
+    return true;
+}
+
+bool htx_crypto_needs_rekey(const htx_connection_t *conn) {
+    if (!conn) return false;
+    
+    time_t now = time(NULL);
+    
+    // Check send crypto state
+    if (conn->send_crypto.bytes_encrypted >= HTX_REKEY_DATA_LIMIT ||
+        conn->send_crypto.frames_sent >= HTX_REKEY_FRAME_LIMIT ||
+        (now - conn->send_crypto.last_rekey) >= HTX_REKEY_TIME_LIMIT) {
+        return true;
+    }
+    
+    return false;
+}
+
+const char *htx_frame_type_name(htx_frame_type_t type) {
+    switch (type) {
+        case HTX_FRAME_STREAM: return "STREAM";
+        case HTX_FRAME_PING: return "PING";
+        case HTX_FRAME_CLOSE: return "CLOSE";
+        case HTX_FRAME_KEY_UPDATE: return "KEY_UPDATE";
+        case HTX_FRAME_WINDOW_UPDATE: return "WINDOW_UPDATE";
+        default: return "UNKNOWN";
+    }
+}
+
+bool htx_stream_id_valid(uint32_t stream_id, bool is_client) {
+    if (stream_id == 0) return false;  // Stream ID 0 is reserved
+    
+    bool is_odd = (stream_id % 2) == 1;
+    
+    // Client streams are odd, server streams are even
+    return is_client ? is_odd : !is_odd;
+}
+
+htx_frame_encode_result_t *htx_frame_encode_result_alloc(size_t max_size) {
+    htx_frame_encode_result_t *result = malloc(sizeof(htx_frame_encode_result_t));
+    if (result) {
+        memset(result, 0, sizeof(htx_frame_encode_result_t));
+    }
+    return result;
+}
+
+void htx_frame_encode_result_free(htx_frame_encode_result_t *result) {
+    if (result && result->wire_data) {
+        OPENSSL_cleanse(result->wire_data, result->wire_len);
+        free(result->wire_data);
+        result->wire_data = NULL;
+        result->wire_len = 0;
+    }
+}
+
+void htx_frame_decode_result_free(htx_frame_decode_result_t *result) {
+    if (result) {
+        if (result->frame.plaintext) {
+            OPENSSL_cleanse(result->frame.plaintext, result->frame.plaintext_len);
+            free(result->frame.plaintext);
+        }
+        if (result->frame.ciphertext) {
+            free(result->frame.ciphertext);
+        }
+        memset(result, 0, sizeof(htx_frame_decode_result_t));
+    }
+}

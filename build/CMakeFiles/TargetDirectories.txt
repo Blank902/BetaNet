@@ -15,4 +15,7 @@ C:/Users/xxlmn/Documents/BetaNet/build/tests/integration/CMakeFiles/noise_handsh
 C:/Users/xxlmn/Documents/BetaNet/build/tests/integration/CMakeFiles/tls_server_demo.dir
 C:/Users/xxlmn/Documents/BetaNet/build/tests/integration/CMakeFiles/end_to_end_test.dir
 C:/Users/xxlmn/Documents/BetaNet/build/tests/integration/CMakeFiles/performance_test.dir
+C:/Users/xxlmn/Documents/BetaNet/build/tests/integration/CMakeFiles/scion_test.dir
+C:/Users/xxlmn/Documents/BetaNet/build/tests/integration/CMakeFiles/htx_tickets_test.dir
+C:/Users/xxlmn/Documents/BetaNet/build/tests/integration/CMakeFiles/htx_frames_test.dir
 C:/Users/xxlmn/Documents/BetaNet/build/tests/integration/CMakeFiles/RUN_TESTS.dir

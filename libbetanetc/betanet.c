@@ -9,10 +9,15 @@
 #include "../src/path/path.h"
 #include "../src/util/platform.h"
 #include "../src/util/performance.h"
+#include "betanet/scion.h"
 
-// Forward declaration for performance initialization
+// Forward declarations
 int betanet_performance_init(void);
 void betanet_performance_shutdown(void);
+
+// Global SCION selector for advanced routing
+static scion_selector_t g_scion_selector;
+static bool g_scion_initialized = false;
 
 void betanet_init(void) {
     // Initialize platform (Winsock on Windows)
@@ -24,9 +29,29 @@ void betanet_init(void) {
     } else {
         printf("[betanet] Performance optimizations enabled\n");
     }
+    
+    // Initialize SCION path selector for advanced routing
+    scion_selection_config_t scion_config = scion_get_default_config();
+    scion_config.enable_multipath = true; // Enable multipath for redundancy
+    scion_config.criteria = SCION_SELECT_BALANCED; // Balanced performance
+    
+    if (scion_selector_init(&g_scion_selector, &scion_config) == SCION_SUCCESS) {
+        g_scion_initialized = true;
+        printf("[betanet] SCION advanced routing enabled\n");
+    } else {
+        printf("[betanet] Warning: SCION routing initialization failed\n");
+        g_scion_initialized = false;
+    }
 }
 
 void betanet_shutdown(void) {
+    // Cleanup SCION selector
+    if (g_scion_initialized) {
+        scion_selector_cleanup(&g_scion_selector);
+        g_scion_initialized = false;
+        printf("[betanet] SCION routing shutdown complete\n");
+    }
+    
     // Shutdown performance optimizations
     betanet_performance_shutdown();
     
@@ -83,6 +108,29 @@ int betanet_connect_with_ticket(htx_ctx_t* ctx, const char* host, uint16_t port,
     // Record connection attempt start time for metrics
     time_t start_time = get_current_time_ms();
     
+    // SCION path discovery and selection for advanced routing
+    scion_path_t* selected_path = NULL;
+    if (g_scion_initialized) {
+        // Parse destination from host (in real implementation, this would be SCION IA)
+        scion_ia_t dst_ia = {.isd = 1, .as = 0xff00000111}; // Example destination
+        
+        // Discover available paths to destination
+        scion_error_t discovery_result = scion_discover_paths(&g_scion_selector, &dst_ia, 
+                                                              SCION_DEFAULT_DISCOVERY_TIMEOUT_MS);
+        if (discovery_result == SCION_SUCCESS) {
+            // Select optimal path based on configured criteria
+            scion_error_t selection_result = scion_select_path(&g_scion_selector, &dst_ia, &selected_path);
+            if (selection_result == SCION_SUCCESS && selected_path) {
+                printf("[betanet] SCION path selected - Latency: %ums, Bandwidth: %ukbps\n",
+                       selected_path->quality.latency_ms, selected_path->quality.bandwidth_kbps);
+            } else {
+                printf("[betanet] SCION path selection failed, using default routing\n");
+            }
+        } else {
+            printf("[betanet] SCION path discovery failed, using default routing\n");
+        }
+    }
+    
     // Parse and validate ticket if provided
     if (ticket_str) {
         htx_ticket_t ticket;
@@ -97,7 +145,7 @@ int betanet_connect_with_ticket(htx_ctx_t* ctx, const char* host, uint16_t port,
         }
     }
     
-    printf("[betanet] Connecting to %s:%u with performance optimizations\n", 
+    printf("[betanet] Connecting to %s:%u with SCION routing and performance optimizations\n", 
            host ? host : "localhost", port);
     
     // Try to get a connection from the pool first
@@ -124,9 +172,32 @@ int betanet_connect_with_ticket(htx_ctx_t* ctx, const char* host, uint16_t port,
         printf("[betanet] Successfully connected to %s:%u\n", host ? host : "localhost", port);
         time_t duration = get_current_time_ms() - start_time;
         betanet_metrics_record_connection(true, (double)duration);
+        
+        // Update SCION path quality with successful connection metrics
+        if (selected_path && g_scion_initialized) {
+            scion_path_quality_t quality_update = selected_path->quality;
+            quality_update.latency_ms = (uint32_t)duration; // Use actual connection time
+            quality_update.is_active = true;
+            scion_update_path_quality(selected_path, &quality_update);
+            printf("[betanet] Updated SCION path quality metrics\n");
+        }
+        
         return 0;
     } else {
         printf("[betanet] Connection failed, falling back to demo mode\n");
+        
+        // Update SCION path quality with failure information
+        if (selected_path && g_scion_initialized) {
+            scion_path_quality_t quality_update = selected_path->quality;
+            quality_update.is_active = false;
+            // Increase packet loss to indicate poor path quality
+            quality_update.packet_loss = quality_update.packet_loss + 1000; // Significant penalty
+            scion_update_path_quality(selected_path, &quality_update);
+            
+            // Trigger path monitoring to potentially switch paths
+            scion_monitor_and_switch(&g_scion_selector);
+        }
+        
         // Fallback to demo mode for testing
         ctx->is_connected = 1;
         time_t duration = get_current_time_ms() - start_time;
@@ -256,4 +327,70 @@ int betanet_secure_rekey(noise_channel_t* chan) {
 
 int betanet_secure_rekey_pending(noise_channel_t* chan) {
     return noise_channel_rekey_pending(chan);
+}
+
+// ==============================================================================
+// SCION Advanced Routing API
+// ==============================================================================
+
+int betanet_scion_discover_paths(const char* dst_ia_str, uint32_t timeout_ms) {
+    if (!g_scion_initialized || !dst_ia_str) {
+        return -1;
+    }
+    
+    scion_ia_t dst_ia;
+    if (scion_parse_ia(dst_ia_str, &dst_ia) != SCION_SUCCESS) {
+        printf("[betanet] Invalid SCION IA format: %s\n", dst_ia_str);
+        return -1;
+    }
+    
+    scion_error_t result = scion_discover_paths(&g_scion_selector, &dst_ia, timeout_ms);
+    return (result == SCION_SUCCESS) ? 0 : -1;
+}
+
+int betanet_scion_get_active_path_quality(scion_path_quality_t* quality_out) {
+    if (!g_scion_initialized || !quality_out) {
+        return -1;
+    }
+    
+    if (g_scion_selector.active_path) {
+        *quality_out = g_scion_selector.active_path->quality;
+        return 0;
+    }
+    
+    return -1; // No active path
+}
+
+void betanet_scion_print_metrics(void) {
+    if (g_scion_initialized) {
+        scion_print_metrics(&g_scion_selector);
+    } else {
+        printf("SCION routing not initialized\n");
+    }
+}
+
+int betanet_scion_set_selection_criteria(scion_selection_criteria_t criteria) {
+    if (!g_scion_initialized) {
+        return -1;
+    }
+    
+    g_scion_selector.config.criteria = criteria;
+    printf("[betanet] SCION selection criteria updated\n");
+    return 0;
+}
+
+int betanet_scion_monitor_paths(void) {
+    if (!g_scion_initialized) {
+        return -1;
+    }
+    
+    scion_error_t result = scion_monitor_and_switch(&g_scion_selector);
+    if (result == 1) {
+        printf("[betanet] SCION path switched for better performance\n");
+        return 1; // Path switched
+    } else if (result == SCION_SUCCESS) {
+        return 0; // No switch needed
+    } else {
+        return -1; // Error
+    }
 }

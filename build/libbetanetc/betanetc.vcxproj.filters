@@ -10,6 +10,12 @@
     <ClCompile Include="C:\Users\xxlmn\Documents\BetaNet\src\htx\ticket.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="C:\Users\xxlmn\Documents\BetaNet\src\htx\htx_tickets.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\xxlmn\Documents\BetaNet\src\htx\htx_frames.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="C:\Users\xxlmn\Documents\BetaNet\src\noise\noise.c">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -31,12 +37,21 @@
     <ClCompile Include="C:\Users\xxlmn\Documents\BetaNet\src\util\performance.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="C:\Users\xxlmn\Documents\BetaNet\src\util\scion.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="C:\Users\xxlmn\Documents\BetaNet\src\pay\pay.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="C:\Users\xxlmn\Documents\BetaNet\include\betanet\betanet.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\Users\xxlmn\Documents\BetaNet\include\betanet\scion.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\Users\xxlmn\Documents\BetaNet\include\betanet\htx_frames.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

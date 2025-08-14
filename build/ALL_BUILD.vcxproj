@@ -189,6 +189,14 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
       <Project>{1DC94C84-C8D3-3D22-BF27-AC8631FD2451}</Project>
       <Name>fingerprint_regression_test</Name>
     </ProjectReference>
+    <ProjectReference Include="C:\Users\xxlmn\Documents\BetaNet\build\tests\integration\htx_frames_test.vcxproj">
+      <Project>{EA490CD0-F6B0-3AB2-AF32-F4116FB66317}</Project>
+      <Name>htx_frames_test</Name>
+    </ProjectReference>
+    <ProjectReference Include="C:\Users\xxlmn\Documents\BetaNet\build\tests\integration\htx_tickets_test.vcxproj">
+      <Project>{394B631C-A87E-322F-9B44-3AA969614B0D}</Project>
+      <Name>htx_tickets_test</Name>
+    </ProjectReference>
     <ProjectReference Include="C:\Users\xxlmn\Documents\BetaNet\build\tests\interop\interop_protocol_test.vcxproj">
       <Project>{C1D54136-02F6-32CA-AFDF-BD6C88969547}</Project>
       <Name>interop_protocol_test</Name>
@@ -204,6 +212,10 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     <ProjectReference Include="C:\Users\xxlmn\Documents\BetaNet\build\tests\unit\protocol_regression_test.vcxproj">
       <Project>{34405C61-47BF-38C7-98E6-999D477F0301}</Project>
       <Name>protocol_regression_test</Name>
+    </ProjectReference>
+    <ProjectReference Include="C:\Users\xxlmn\Documents\BetaNet\build\tests\integration\scion_test.vcxproj">
+      <Project>{CF4FD298-8700-31BE-A2BD-B12C53CFF470}</Project>
+      <Name>scion_test</Name>
     </ProjectReference>
     <ProjectReference Include="C:\Users\xxlmn\Documents\BetaNet\build\tests\unit\ticket_parser_fuzz.vcxproj">
       <Project>{E1504B1E-4E22-37B7-BF3E-958C2CEF153A}</Project>
