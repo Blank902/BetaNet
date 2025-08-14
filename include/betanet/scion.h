@@ -9,6 +9,182 @@
 extern "C" {
 #endif
 
+// ==============================================================================
+// BetaNet 1.1 SCION Packet Format - §4.1 Compliance
+// ==============================================================================
+
+/* SCION Protocol Constants - BetaNet 1.1 Specification */
+#define SCION_VERSION 0x02                   /**< SCION protocol version as per §4.1 */
+#define SCION_MIN_HEADER_SIZE 12             /**< Minimum SCION common header size in bytes */
+#define SCION_MAX_HEADER_SIZE 1020           /**< Maximum SCION header size in bytes */
+#define SCION_MAX_PAYLOAD_SIZE 65535         /**< Maximum payload size in bytes */
+#define SCION_MAX_HOPS 64                    /**< Maximum number of hops in path */
+
+/* SCION Address Types */
+#define SCION_ADDR_TYPE_IPV4 0x00           /**< IPv4 address type */
+#define SCION_ADDR_TYPE_IPV6 0x01           /**< IPv6 address type */
+#define SCION_ADDR_TYPE_SVC 0x02            /**< Service address type */
+
+/* SCION Next Header Types */
+#define SCION_NEXTHDR_NONE 0x00             /**< No next header */
+#define SCION_NEXTHDR_UDP 0x11              /**< UDP protocol */
+#define SCION_NEXTHDR_TCP 0x06              /**< TCP protocol */
+#define SCION_NEXTHDR_SCMP 0xCA             /**< SCION Control Message Protocol */
+
+/**
+ * @brief SCION packet header structure (BetaNet 1.1 §4.1)
+ * 
+ * This structure represents the SCION common header as specified in
+ * BetaNet 1.1 §4.1. All multi-byte fields are in network byte order.
+ */
+#pragma pack(push, 1)
+typedef struct {
+    uint8_t version_flags;          /**< Version (4 bits) + Flags (4 bits) */
+    uint8_t qos_flow_id;           /**< QoS (8 bits) + Flow ID start (0 bits) */
+    uint16_t flow_id;              /**< Flow ID (20 bits total, split across fields) */
+    uint8_t next_hdr;              /**< Next header protocol type */
+    uint8_t hdr_len;               /**< Header length in 4-byte units */
+    uint16_t payload_len;          /**< Payload length in bytes */
+    uint8_t path_type;             /**< Path type */
+    uint8_t dt_dl_st_sl;           /**< DstType(2) + DstLen(6) + SrcType(2) + SrcLen(6) */
+    uint16_t rsv;                  /**< Reserved field */
+} scion_common_hdr_t;
+#pragma pack(pop)
+
+/**
+ * @brief SCION address information structure
+ * 
+ * Contains addressing information for source and destination
+ */
+typedef struct {
+    uint64_t src_ia;               /**< Source ISD-AS identifier */
+    uint64_t dst_ia;               /**< Destination ISD-AS identifier */
+    uint8_t src_addr[16];          /**< Source address (variable length) */
+    uint8_t dst_addr[16];          /**< Destination address (variable length) */
+    uint8_t src_addr_len;          /**< Source address length */
+    uint8_t dst_addr_len;          /**< Destination address length */
+} scion_addr_info_t;
+
+/**
+ * @brief Complete SCION packet structure (BetaNet 1.1 compliant)
+ * 
+ * Represents a complete SCION packet with header, addressing, and payload
+ */
+typedef struct {
+    scion_common_hdr_t header;     /**< Common SCION header */
+    scion_addr_info_t addr_info;   /**< Source and destination addressing */
+    uint8_t *path_data;            /**< Path information (variable length) */
+    size_t path_size;              /**< Size of path data */
+    uint8_t *payload;              /**< Packet payload */
+    size_t payload_size;           /**< Size of payload */
+    size_t total_size;             /**< Total packet size */
+} scion_packet_t;
+
+/**
+ * @brief SCION packet validation result
+ */
+typedef enum {
+    SCION_PACKET_VALID = 0,               /**< Packet is valid */
+    SCION_PACKET_ERR_INVALID_VERSION,     /**< Invalid SCION version */
+    SCION_PACKET_ERR_INVALID_HEADER_LEN,  /**< Invalid header length */
+    SCION_PACKET_ERR_INVALID_PAYLOAD_LEN, /**< Invalid payload length */
+    SCION_PACKET_ERR_INVALID_ADDRESS,     /**< Invalid address format */
+    SCION_PACKET_ERR_INVALID_PATH,        /**< Invalid path information */
+    SCION_PACKET_ERR_BUFFER_TOO_SMALL,    /**< Buffer too small for packet */
+    SCION_PACKET_ERR_INVALID_CHECKSUM     /**< Invalid packet checksum */
+} scion_packet_validation_result_t;
+
+// ==============================================================================
+// BetaNet 1.1 SCION Packet API - §4.1 Compliance
+// ==============================================================================
+
+/**
+ * @brief Initialize a SCION packet structure
+ * 
+ * @param packet Pointer to packet structure to initialize
+ * @return true on success, false on failure
+ */
+bool scion_packet_init(scion_packet_t *packet);
+
+/**
+ * @brief Clean up a SCION packet structure
+ * 
+ * @param packet Pointer to packet structure to clean up
+ */
+void scion_packet_cleanup(scion_packet_t *packet);
+
+/**
+ * @brief Validate a SCION packet header (BetaNet 1.1 §4.1)
+ * 
+ * Validates the packet according to BetaNet 1.1 §4.1 requirements
+ * 
+ * @param packet Pointer to packet to validate
+ * @return Validation result code
+ */
+scion_packet_validation_result_t scion_validate_packet(const scion_packet_t *packet);
+
+/**
+ * @brief Parse a SCION packet from raw bytes
+ * 
+ * @param buffer Raw packet data
+ * @param buffer_size Size of raw data
+ * @param packet Output packet structure
+ * @return true on successful parsing, false on error
+ */
+bool scion_parse_packet(const uint8_t *buffer, size_t buffer_size, scion_packet_t *packet);
+
+/**
+ * @brief Serialize a SCION packet to raw bytes
+ * 
+ * @param packet Packet structure to serialize
+ * @param buffer Output buffer for raw data
+ * @param buffer_size Size of output buffer
+ * @param written_size Output parameter for actual bytes written
+ * @return true on successful serialization, false on error
+ */
+bool scion_serialize_packet(const scion_packet_t *packet, uint8_t *buffer, 
+                           size_t buffer_size, size_t *written_size);
+
+/**
+ * @brief Create SCION packet with specified parameters
+ * 
+ * @param src_ia Source ISD-AS identifier
+ * @param dst_ia Destination ISD-AS identifier
+ * @param src_addr Source address
+ * @param src_addr_len Source address length
+ * @param dst_addr Destination address
+ * @param dst_addr_len Destination address length
+ * @param payload Packet payload data
+ * @param payload_size Size of payload
+ * @param packet Output packet structure
+ * @return true on success, false on failure
+ */
+bool scion_create_packet(uint64_t src_ia, uint64_t dst_ia,
+                        const uint8_t *src_addr, uint8_t src_addr_len,
+                        const uint8_t *dst_addr, uint8_t dst_addr_len,
+                        const uint8_t *payload, size_t payload_size,
+                        scion_packet_t *packet);
+
+/**
+ * @brief Check if packet version matches BetaNet 1.1 requirements
+ * 
+ * @param packet Packet to check
+ * @return true if version is valid, false otherwise
+ */
+bool scion_is_valid_version(const scion_packet_t *packet);
+
+/**
+ * @brief Get human-readable description of validation error
+ * 
+ * @param result Validation result code
+ * @return String description of error
+ */
+const char* scion_packet_validation_error_string(scion_packet_validation_result_t result);
+
+// ==============================================================================
+// Legacy Path Selection API (Existing Implementation)
+// ==============================================================================
+
 // Forward declarations
 typedef struct scion_path scion_path_t;
 typedef struct scion_selector scion_selector_t;

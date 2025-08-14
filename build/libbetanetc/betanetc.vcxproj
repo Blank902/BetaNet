@@ -301,11 +301,17 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     <ClCompile Include="C:\Users\xxlmn\Documents\BetaNet\src\noise\noise.c" />
     <ClCompile Include="C:\Users\xxlmn\Documents\BetaNet\src\shape\shape.c" />
     <ClCompile Include="C:\Users\xxlmn\Documents\BetaNet\src\path\path.c" />
+    <ClCompile Include="C:\Users\xxlmn\Documents\BetaNet\src\path\scion.c">
+      <ObjectFileName>$(IntDir)/__/src/path/scion.c.obj</ObjectFileName>
+    </ClCompile>
     <ClCompile Include="C:\Users\xxlmn\Documents\BetaNet\src\boot\boot.c" />
     <ClCompile Include="C:\Users\xxlmn\Documents\BetaNet\src\util\util.c" />
     <ClCompile Include="C:\Users\xxlmn\Documents\BetaNet\src\util\cert_utils.c" />
     <ClCompile Include="C:\Users\xxlmn\Documents\BetaNet\src\util\performance.c" />
-    <ClCompile Include="C:\Users\xxlmn\Documents\BetaNet\src\util\scion.c" />
+    <ClCompile Include="C:\Users\xxlmn\Documents\BetaNet\src\util\scion.c">
+      <ObjectFileName>$(IntDir)/__/src/util/scion.c.obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="C:\Users\xxlmn\Documents\BetaNet\src\util\secure_utils.c" />
     <ClCompile Include="C:\Users\xxlmn\Documents\BetaNet\src\pay\pay.c" />
   </ItemGroup>
   <ItemGroup>

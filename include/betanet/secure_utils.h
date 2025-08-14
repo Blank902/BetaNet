@@ -24,6 +24,15 @@ extern "C" {
 int secure_memcpy(void* dest, size_t dest_size, const void* src, size_t src_size);
 
 /**
+ * @brief Secure memory set with bounds checking
+ * @param dest Destination buffer
+ * @param value Value to set (0-255)
+ * @param size Number of bytes to set
+ * @return 0 on success, -1 on error
+ */
+int secure_memset(void* dest, int value, size_t size);
+
+/**
  * @brief Secure string copy with bounds checking and null termination
  * @param dest Destination buffer
  * @param dest_size Size of destination buffer (including null terminator)

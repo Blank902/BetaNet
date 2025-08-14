@@ -7,6 +7,7 @@ C:/Users/xxlmn/Documents/BetaNet/build/cli/bnetc-cli/CMakeFiles/bnetc-cli.dir
 C:/Users/xxlmn/Documents/BetaNet/build/cli/bnetc-cli/CMakeFiles/RUN_TESTS.dir
 C:/Users/xxlmn/Documents/BetaNet/build/tests/unit/CMakeFiles/fingerprint_regression_test.dir
 C:/Users/xxlmn/Documents/BetaNet/build/tests/unit/CMakeFiles/protocol_regression_test.dir
+C:/Users/xxlmn/Documents/BetaNet/build/tests/unit/CMakeFiles/test_scion_basic.dir
 C:/Users/xxlmn/Documents/BetaNet/build/tests/unit/CMakeFiles/ticket_parser_fuzz.dir
 C:/Users/xxlmn/Documents/BetaNet/build/tests/unit/CMakeFiles/RUN_TESTS.dir
 C:/Users/xxlmn/Documents/BetaNet/build/tests/interop/CMakeFiles/interop_protocol_test.dir

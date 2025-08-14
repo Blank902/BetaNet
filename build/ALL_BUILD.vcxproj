@@ -225,6 +225,10 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
       <Project>{CF4FD298-8700-31BE-A2BD-B12C53CFF470}</Project>
       <Name>scion_test</Name>
     </ProjectReference>
+    <ProjectReference Include="C:\Users\xxlmn\Documents\BetaNet\build\tests\unit\test_scion_basic.vcxproj">
+      <Project>{B0A48337-9891-3FD3-B15B-6CB547106413}</Project>
+      <Name>test_scion_basic</Name>
+    </ProjectReference>
     <ProjectReference Include="C:\Users\xxlmn\Documents\BetaNet\build\tests\unit\ticket_parser_fuzz.vcxproj">
       <Project>{E1504B1E-4E22-37B7-BF3E-958C2CEF153A}</Project>
       <Name>ticket_parser_fuzz</Name>

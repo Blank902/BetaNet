@@ -16,11 +16,13 @@ add_library(betanetc
     ../src/noise/noise.c
     ../src/shape/shape.c
     ../src/path/path.c
+    ../src/path/scion.c
     ../src/boot/boot.c
     ../src/util/util.c
     ../src/util/cert_utils.c
     ../src/util/performance.c
     ../src/util/scion.c
+    ../src/util/secure_utils.c
     ../src/pay/pay.c
 )
 

@@ -41,6 +41,29 @@ int secure_memcpy(void* dest, size_t dest_size, const void* src, size_t src_size
     return SECURE_ERROR_NONE;
 }
 
+int secure_memset(void* dest, int value, size_t size) {
+    // Parameter validation
+    if (!dest) {
+        return SECURE_ERROR_NULL_POINTER;
+    }
+    
+    if (size == 0) {
+        return SECURE_ERROR_NONE;  // Nothing to do
+    }
+    
+    if (size > SECURE_MAX_BUFFER_SIZE) {
+        return SECURE_ERROR_INVALID_SIZE;
+    }
+    
+    // Validate value range
+    if (value < 0 || value > 255) {
+        return SECURE_ERROR_INVALID_SIZE;
+    }
+    
+    memset(dest, value, size);
+    return SECURE_ERROR_NONE;
+}
+
 int secure_strcpy(char* dest, size_t dest_size, const char* src) {
     // Parameter validation
     if (!dest || !src) {
